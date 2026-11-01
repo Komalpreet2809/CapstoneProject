@@ -99,6 +99,10 @@ services:
       <<: *common-env
       REDIS_URL: redis://redis:6379/0
       MINI_UMS_API_URL: http://mini-ums-api:8000
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key}
+      LLM_PROVIDER: ${LLM_PROVIDER:-}
+      LLM_MODEL: ${LLM_MODEL:-claude-haiku-5-5}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     ports:
       - "${ORCHESTRATOR_PORT:-8002}:8000"
     healthcheck: *python-healthcheck
@@ -112,16 +116,53 @@ services:
       context: .
       dockerfile: infra/docker/python-service.Dockerfile
       args: { PACKAGE: gateway, MODULE: gateway }
-    environment:
+    environment: &gateway-env
       <<: *common-env
       ORCHESTRATOR_URL: http://orchestrator:8000
+      REDIS_URL: redis://redis:6379/0
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key}
       LIVEKIT_URL: ws://livekit:7880
+      # What browsers connect to (the widget runs on the host, not in Compose).
+      LIVEKIT_PUBLIC_URL: ${LIVEKIT_URL:-ws://localhost:7880}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-secret}
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
     ports:
       - "${GATEWAY_PORT:-8003}:8000"
     healthcheck: *python-healthcheck
     depends_on:
       orchestrator: { condition: service_healthy }
       livekit: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+
+  # The realtime half of the gateway (D-026): a LiveKit Agents worker from the same image.
+  # It shares LiveKit's network namespace because `livekit-server --dev` advertises
+  # 127.0.0.1 for media, which inside a separate container would be the worker itself.
+  gateway-worker:
+    build:
+      context: .
+      dockerfile: infra/docker/python-service.Dockerfile
+      args: { PACKAGE: gateway, MODULE: gateway }
+    command: ["python", "-m", "gateway.worker", "start"]
+    network_mode: "service:livekit"
+    environment:
+      <<: *gateway-env
+      LIVEKIT_URL: ${LIVEKIT_URL:-ws://127.0.0.1:7880}
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/', timeout=3)
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 20s
+    depends_on:
+      orchestrator: { condition: service_healthy }
+      livekit: { condition: service_healthy }
+      redis: { condition: service_healthy }
     restart: unless-stopped
 
   widget:
@@ -142,8 +183,11 @@ services:
     environment:
       # Browser-facing URL: the page tells the visitor's browser where to load the widget from.
       WIDGET_URL: http://localhost:${WIDGET_PORT:-4100}/widget.js
-      # Server-side only: Next.js calls the API; the browser never sees this URL or the token.
+      # Server-side only: Next.js calls these; the browser never sees the URLs or the token.
       MINI_UMS_API_URL: http://mini-ums-api:8000
+      ORCHESTRATOR_URL: http://orchestrator:8000
+      GATEWAY_URL: http://gateway:8000
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key}
     ports:
       - "${MINI_UMS_WEB_PORT:-3000}:3000"
     healthcheck: *node-healthcheck
@@ -162,6 +206,7 @@ services:
         orchestrator=http://orchestrator:8000/ready,
         gateway=http://gateway:8000/ready,
         livekit=http://livekit:7880/,
+        gateway_worker=http://livekit:8081/,
         widget=http://widget/health,
         mini_ums_web=http://mini-ums-web:3000/api/health
     ports:

@@ -81,6 +81,9 @@ jobs:
     name: Compose smoke and browser tests
     runs-on: ubuntu-24.04
     needs: [python, js]
+    # Replay mode: recorded transcripts and intents, no paid providers, so the voice test runs.
+    env:
+      REPLAY_MODE: "true"
     steps:
       - uses: actions/checkout@v7
       - name: Build and start every service

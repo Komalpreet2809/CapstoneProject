@@ -19,6 +19,7 @@ dev = [
   "mypy>=1.18",
   "pre-commit>=4",
   "types-pyyaml>=6",
+  "fakeredis>=2.30",
 ]
 
 [tool.ruff]

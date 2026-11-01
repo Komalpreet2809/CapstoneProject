@@ -272,7 +272,7 @@ async function MyCourses() {
                     <Link href="/m/time-table" className="hover:underline">
                       Timetable
                     </Link>
-                    <Link href="/m/student-attendance" className="hover:underline">
+                    <Link href="/attendance" className="hover:underline">
                       Attendance
                     </Link>
                   </p>

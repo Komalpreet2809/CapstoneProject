@@ -216,3 +216,68 @@ the web app, the API and Postgres. The tests change data, so `make e2e` (and CI)
 and run them one at a time. Locally they use the installed Chrome (no browser download);
 CI installs Playwright's Chromium. One persona's session is saved once and reused; the saved
 file holds a session cookie, so it is git-ignored and excluded from Docker build contexts.
+
+### D-025 — Voice sessions start on the Mini UMS server
+*M3 · 2026-11-01 · Accepted*
+
+The widget calls `POST /api/voice/session` on the page it is embedded in. That Next.js route
+reads the httpOnly session cookie and hands the API token server-to-server (internal key) to
+the gateway and orchestrator, which keep it in Redis with the voice session. The browser only
+receives a LiveKit room token and an opaque session id. Identity stays with the authenticated
+session (rule 1), and the agent calls the Mini UMS API as that student without any API change.
+
+### D-026 — LiveKit Agents worker for audio; the orchestrator owns the conversation
+*M3 · 2026-11-01 · Accepted*
+
+The brief's default. A LiveKit Agents worker (gateway image, its own Compose service) handles
+VAD, end-of-turn detection, STT, TTS and interruptions. For each finished turn it calls the
+orchestrator's streaming turn API instead of an LLM, so voice and the text fallback share one
+code path. Barge-in = LiveKit's interruption plus cancelling the orchestrator stream.
+
+### D-027 — M3 providers: Deepgram for speech, Claude Haiku for intent
+*M3 · 2026-11-01 · Accepted for M3; revisited in M5*
+
+English only in M3, so one Deepgram account covers both streaming STT and TTS. Intent and entity
+extraction uses a small hosted model with tool calling (Claude Haiku). The brief asks to pick STT
+and TTS per language by benchmarking recorded speech; that happens in M5 with Hindi, Punjabi and
+Hinglish, and may change these choices. Every provider sits behind an interface.
+
+### D-028 — Replay mode and the budget guard live in the provider layer
+*M3 · 2026-11-01 · Accepted*
+
+`REPLAY_MODE=true` swaps every provider for recorded fixtures (cost 0), so CI and demos are
+free and deterministic. In live mode each call first asks the budget guard: today's spend
+(Redis, keyed by IST date) plus the call's estimate must stay under `DAILY_BUDGET_USD`, otherwise
+the call is refused and the student hears a polite "voice is paused for today". Actual cost is
+recorded after the call from a price table in config.
+
+### D-029 — M3 replies are templates filled from tool output
+*M3 · 2026-11-01 · Accepted*
+
+The LLM only extracts intent and entities as structured output. The spoken reply and the card are
+built from the API's numbers by code, so every number is grounded by construction (rule 4) and
+replies are fast. Free-form LLM wording, and the number-grounding guard that checks it, arrive in
+M4.
+
+### D-030 — Latency in logs; Langfuse Cloud when configured
+*M3 · 2026-11-01 · Accepted (decides D-010)*
+
+Every turn logs per-stage timestamps and keeps the last 1,000 in Redis for `make latency`.
+Tracing goes to Langfuse Cloud only when its keys are set; self-hosting Langfuse (four or more
+containers) isn't worth it for this project.
+
+### D-031 — The widget bundles the LiveKit client
+*M3 · 2026-11-01 · Accepted*
+
+Voice needs WebRTC, so `livekit-client` is bundled into `widget.js`, keeping the brief's "single
+embeddable script". The bundle grows from ~3 KB to ~570 KB (188 KB gzipped, now served
+compressed). Loading the voice part lazily would need a second file; worth it only if page
+weight becomes a problem.
+
+### D-032 — The voice worker shares LiveKit's network namespace locally
+*M3 · 2026-11-01 · Accepted for local dev*
+
+`livekit-server --dev` advertises 127.0.0.1 for media. A worker in its own container would try
+to reach itself there, so the `gateway-worker` service uses `network_mode: service:livekit`. On
+LiveKit Cloud (or a server with a real node IP) this isn't needed; the worker then just
+needs `LIVEKIT_URL`.

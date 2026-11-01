@@ -1,7 +1,8 @@
 # Architecture
 
-Status: **M1 (foundation)**. Services exist and talk to each other; features arrive in
-later milestones. Design decisions are in [decisions.md](decisions.md).
+Status: **M3 (voice MVP)**. The Mini UMS is complete for M2; the voice pipeline answers one
+Ask feature (attendance) by voice and by text. Design decisions are in
+[decisions.md](decisions.md).
 
 ## Services
 
@@ -12,6 +13,7 @@ flowchart LR
   web[mini-ums-web<br/>Next.js :3000]
   widget[widget<br/>nginx :4100]
   lk[livekit<br/>:7880-7882]
+  worker[gateway-worker<br/>LiveKit Agents]
   gw[gateway<br/>:8003]
   orch[orchestrator<br/>:8002]
   api[mini-ums-api<br/>:8001]
@@ -21,42 +23,64 @@ flowchart LR
 
   student --> web
   student -- loads widget.js --> widget
-  student -. WebRTC audio, M3 .-> lk
-  web -. REST, M2 .-> api
-  lk <-- ready check; media M3 --> gw
-  gw --> orch
-  orch -- ready check; adapters M4 --> api
+  student -- WebRTC audio + captions + cards --> lk
+  web -- REST, as the student --> api
+  web -- voice session, text turns --> orch
+  web -- room token --> gw
+  lk <-- agent joins the room --> worker
+  worker -- turn API, streamed --> orch
+  orch -- adapter, as the student --> api
   orch --> redis
+  worker -- budget, latency --> redis
   api --> db
   staff --> dash
   dash -. polls /ready .-> api & orch & gw & widget & web
 ```
 
-Solid arrows are wired today (at least as readiness checks); dotted ones arrive in the
-milestone shown.
+| Service | Role | Arrives |
+|---|---|---|
+| `db` | Postgres 16 + pgvector: Mini UMS data (and rulebook embeddings in M5) | M1 |
+| `redis` | Voice sessions, daily budget, latency records (OTP TTLs, rate limits later) | M1, M3 |
+| `livekit` | WebRTC media server (self-hosted dev mode locally) | M1 |
+| `mini-ums-api` | Synthetic UMS: data API, auth, seed generator | M2 |
+| `mini-ums-web` | Univra portal; embeds the widget; starts voice sessions server-side | M2, M3 |
+| `orchestrator` | The agent: sessions, LangGraph graph, intent, replies, streaming turn API | M3 |
+| `gateway` | Mints LiveKit room tokens and dispatches the agent worker | M3 |
+| `gateway-worker` | VAD, end of turn, STT, TTS, barge-in, latency; calls the orchestrator | M3 |
+| `widget` | Mic button, captions, cards, text input; one JS file | M3 |
+| `dashboard` | Staff dashboard; today a live status page | M1, M6 |
 
-| Service | Role | Depends on (ready check) | Arrives |
-|---|---|---|---|
-| `db` | Postgres 16 + pgvector: Mini UMS data and rulebook embeddings | — | M1 |
-| `redis` | Session state, OTP TTLs, rate limits | — | M1 |
-| `livekit` | WebRTC media server (self-hosted dev mode) | — | M1 |
-| `mini-ums-api` | Synthetic UMS: data API, auth, seed generator | `db` + `vector` extension | M1 shell, M2 features |
-| `orchestrator` | LangGraph agent, tools, guardrails, prompts | `redis`, `mini-ums-api` | M1 shell, M3–M4 |
-| `gateway` | Realtime audio: STT → agent → TTS, VAD, barge-in | `orchestrator`, `livekit` | M1 shell, M3 |
-| `widget` | Embeddable mic button and panel, one JS file | — | M1 shell, M3–M4 |
-| `mini-ums-web` | Mini UMS front end; embeds the widget on every page | `mini-ums-api`, `widget` | M1 shell, M2 |
-| `dashboard` | Staff dashboard; today a live status page | all of the above | M1 status, M6 |
+## A voice turn
 
-## Boundaries that matter later
+1. The widget asks its host page for a session (`POST /api/voice/session`). The Next.js route
+   reads the httpOnly cookie, creates an orchestrator session holding the portal token, and
+   asks the gateway for a LiveKit token. The browser only ever sees a session id and that
+   room token (D-025).
+2. The widget joins room `vs-<session>`; the token's dispatch brings the agent worker in.
+3. Push-to-talk: the widget turns the mic on and calls the agent's `start_turn` RPC.
+   Silero VAD ends the turn when the student stops talking (or they tap again: `end_turn`).
+4. STT produces the transcript (live captions go to the widget). The worker sends it to the
+   orchestrator, which classifies it, calls the Mini UMS API as the student, and streams back
+   templated sentences and a card (D-029).
+5. TTS speaks each sentence as it arrives; the card goes over the data channel.
+6. Barge-in: speaking (or tapping the mic) during the reply interrupts it and cancels the
+   orchestrator stream.
+7. Timings per stage go to logs and Redis; `make latency` prints p50/p95.
 
-- **Adapters.** The orchestrator never queries the database. It calls `mini-ums-api`
-  through adapter interfaces, so a real UMS could replace the Mini UMS without agent changes.
-- **Identity.** `student_id` comes only from the authenticated session; the API rejects
-  requests whose `student_id` doesn't match the token (rule 1, M2/M4).
-- **Providers.** STT, TTS, LLM and tracing providers sit behind interfaces with a replay mode
-  and a daily budget check (M3).
+Typed questions skip steps 2–5: the widget posts to `/api/voice/text`, which streams the
+same orchestrator turn back.
 
-## Cross-cutting (M1)
+## Boundaries that matter
+
+- **Adapters.** The orchestrator never queries the database. It calls `mini-ums-api` through
+  an adapter, as the student, so a real UMS could replace the Mini UMS without agent changes.
+- **Identity.** The student comes only from the authenticated session (rule 1): the API takes
+  it from the token, and no `/me` route accepts a student identifier (checked in the contract).
+- **Providers.** STT, TTS and the LLM sit behind interfaces with a replay mode, and every paid
+  call is checked against the daily budget first (D-028).
+- **Untrusted text.** Transcripts never enter the system prompt and can't add tools (rule 6).
+
+## Cross-cutting
 
 - **Health:** `/health` = alive; `/ready` = dependencies reachable. Compose waits on `/ready`.
 - **Logs:** one JSON object per line on stdout; IDs, phone numbers, OTPs and tokens are masked

@@ -56,7 +56,7 @@ test("menu search: '/' focuses it, keywords match, and ☆ pins a Quick Link", a
   await expect(page.getByRole("option", { name: /View Attendance/ })).toBeVisible();
   await page.getByRole("button", { name: "Add to Quick Links" }).first().click();
   await search.press("Enter");
-  await expect(page).toHaveURL(/\/m\/student-attendance$/);
+  await expect(page).toHaveURL(/\/attendance$/); // a real page since M3
 
   await page.getByRole("button", { name: "Quick Links" }).click();
   await expect(page.locator("#mega-panel").getByRole("link", { name: "View Attendance" })).toBeVisible();

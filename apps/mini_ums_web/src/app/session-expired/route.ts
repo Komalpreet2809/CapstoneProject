@@ -1,11 +1,9 @@
-import { NextResponse, type NextRequest } from "next/server";
 import { clearSession } from "@/lib/session";
 
 /** Pages land here when the API rejects the token: clear the cookie, then sign in again. */
-export async function GET(request: NextRequest) {
+export async function GET() {
   await clearSession();
-  const url = request.nextUrl.clone();
-  url.pathname = "/login";
-  url.search = "?expired=1";
-  return NextResponse.redirect(url);
+  // A relative Location: in the standalone server, request.nextUrl carries the bind address
+  // (0.0.0.0), not the host the browser used.
+  return new Response(null, { status: 307, headers: { Location: "/login?expired=1" } });
 }

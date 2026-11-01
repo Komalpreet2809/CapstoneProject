@@ -187,3 +187,116 @@ server code calls the API.
 
 Dedicated pages for attendance, timetable, fees, exams and hostel leave (waiting for page
 specs); OTP; staff-side ticket handling (M6); adapter clients for the agent (M3/M4).
+
+---
+
+## M3 — Voice MVP (English, one Ask feature)
+
+**Goal:** a student taps the mic on any Univra page, asks about their attendance in English,
+and hears the answer while a card with the numbers appears. They can interrupt it.
+
+**Done when (brief):** spoken question → spoken answer + card; barge-in works; latency logged.
+
+**The Ask feature:** course-wise attendance ("What's my attendance?", "Am I short in Computer
+Networks?", "How many classes can I miss in CSE326?"). Percentages and threshold comparisons
+already come from the API, computed in code.
+
+### How a turn flows
+
+1. The widget asks the host page for a voice session: `POST /api/voice/session` on the Mini
+   UMS origin. The Next.js route reads the httpOnly cookie, so the API token never reaches the
+   browser or the widget.
+2. The gateway checks the token with the orchestrator, then returns a LiveKit room token and an
+   opaque session id. The orchestrator keeps the session in Redis: the API token, student,
+   page and language.
+3. The widget joins the LiveKit room with the mic (push-to-talk). A LiveKit Agents worker joins
+   too: Silero VAD + end-of-turn detection, then streaming speech-to-text, sending live captions
+   to the widget.
+4. On end of turn the worker sends the transcript to the orchestrator
+   (`POST /sessions/{id}/turns`). The graph runs classify → attendance → respond and streams
+   sentences, then a card.
+5. The worker speaks each sentence as it arrives (sentence-level streaming TTS) and forwards
+   the card over the data channel. The widget renders it.
+6. **Barge-in:** the student starts speaking (or taps the mic) → playback stops, the
+   orchestrator stream is cancelled and the turn is marked interrupted.
+7. **Text fallback:** typing in the panel goes through `POST /api/voice/text` to the same
+   orchestrator turn API. It works even when WebRTC doesn't.
+
+### Work items
+
+1. **Providers** (`libs/common`): interfaces for STT, TTS and LLM; `live` and `replay`
+   implementations selected by `REPLAY_MODE`; a price table; a **budget guard** that checks
+   today's spend in Redis before every paid call and records the actual cost after it.
+2. **Orchestrator:** a session store (Redis, 1 h TTL); a Mini UMS adapter (the agent never
+   touches the database); a LangGraph graph (classify → attendance → respond, plus polite
+   refusals for out-of-scope or not-yet-supported requests); deterministic course matching
+   (codes like "cse 326", "CSE-326", titles); replies **templated from tool output**; the
+   streaming turn API.
+3. **Gateway:** `POST /sessions` (internal key, mints the LiveKit token); a LiveKit Agents
+   worker (a separate Compose service from the same image) that wires VAD, STT, the
+   orchestrator and TTS, handles interruptions and records per-stage timestamps.
+4. **Widget:** states idle → listening (live captions) → thinking → speaking → done;
+   push-to-talk; answer cards; text input; bottom sheet on mobile. livekit-client is bundled,
+   so it stays one script.
+5. **Mini UMS web:** the voice session and text routes; a real **Attendance page** (the card
+   links to it; it's an M2 carry-over, see below).
+6. **Latency:** per turn, end of utterance, final transcript, the agent's first sentence and
+   first TTS audio, summed into time to first audio. They go to JSON logs and a Redis list;
+   `make latency` prints p50/p95 against the target.
+7. **Tracing:** Langfuse Cloud when its keys are set; otherwise logs only (decides D-010).
+
+### Tests
+
+- Unit: budget guard (under, at and over the cap; day rollover; concurrent spends), provider
+  selection, sentence splitter, course matcher (table-driven), attendance reply templates (every
+  number traced to tool output), intent schema, session store expiry, latency maths.
+- API: session creation (bad token → 401; the token never appears in a response), the turn
+  stream (sentences then card), out-of-scope refusal, cancellation.
+- End to end (replay mode, in CI): Playwright text-fallback question → card; a voice question
+  fed into Chrome's fake microphone from a WAV fixture → spoken-answer events + card.
+- Manual with live providers: speak, hear, interrupt; latency table recorded in this plan.
+
+### Carried over from M2
+
+The brief's M2 asked for real pages for the MVP features. Univra has placeholders for them.
+M3 builds **Attendance** (the voice card links to it); timetable, fees, exams, assignments and
+hostel leave follow in M4, where "navigate" needs them.
+
+### Not in M3
+
+Other Ask features, Do/Track/Learn and confirm-before-write (M4); Hindi, Punjabi and Hinglish
+(M5); frustration detection and hand-off (M6); evaluation report (M7).
+
+### What only you can do
+
+Create accounts and put keys in `.env`: `DEEPGRAM_API_KEY` (speech-to-text and text-to-speech),
+`ANTHROPIC_API_KEY` (the LLM) and, optionally, `LANGFUSE_*`. Until then everything runs and is
+tested in replay mode, which is free. With keys set, the daily cap (`DAILY_BUDGET_USD`, $5)
+still applies.
+
+### Risks
+
+- WebRTC UDP through Docker Desktop on Windows (D-009): if audio fails locally, switch
+  `LIVEKIT_URL` to LiveKit Cloud (free tier) without code changes.
+- Time to first audio target p50 < 1.0 s: templated replies help; measure before optimising.
+
+### Outcome (2026-11-01)
+
+Done in replay mode; live providers wait for keys.
+
+- **Voice path, end to end (replay providers):** a Playwright test speaks into Chrome's fake
+  microphone. The question travels through LiveKit to the worker (Silero VAD, replay STT), the
+  orchestrator answers, replay TTS "speaks" it and the widget shows the transcript, reply and
+  attendance card. Tapping the mic while it speaks interrupts and listens again (barge-in).
+  CI runs this test with `REPLAY_MODE=true`.
+- **Latency logged:** first voice turn: 621 ms to first audio (end of utterance 580, agent
+  first sentence 17, TTS first audio 25). Text turns: agent p50 2 ms, p95 11 ms. The 580 ms
+  is the VAD's silence wait; real STT/TTS will add their own time, measured once keys exist.
+- **Text fallback:** typed questions stream the same answer and card (Playwright tests).
+- **Tests:** 259 Python tests (budget guard, latency maths, course matcher, rules classifier,
+  reply grounding, Claude classifier with the budget, orchestrator API, gateway tokens, the
+  orchestrator-as-LLM stream); 13 Playwright tests (the voice one needs replay mode).
+- **Found and fixed on the way:** a header layout shift switched mega-menus under a resting
+  mouse; session-expired redirects pointed at the server's bind address (`0.0.0.0`).
+- **Not verified:** Deepgram speech and Claude intent with real keys (none configured).
+  Add `DEEPGRAM_API_KEY` and `ANTHROPIC_API_KEY` to `.env`, then `make up` and try the mic.

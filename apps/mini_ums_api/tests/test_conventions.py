@@ -29,6 +29,7 @@ def test_real_pages_are_routed() -> None:
     assert routes == {
         "rms-log-request": "/rms",
         "rms-history": "/rms?tab=history",
+        "student-attendance": "/attendance",
         "dashboard": "/",
     }
 

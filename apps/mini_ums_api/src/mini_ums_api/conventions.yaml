@@ -179,7 +179,7 @@ menu:
           - {id: session-calendar, label: Session Calendar}
           - {id: skill-set, label: Skill Set}
           - {id: syllabus, label: View Academic Course Syllabus, keywords: [syllabus]}
-          - {id: student-attendance, label: View Attendance, keywords: [attendance, hazri, haazri, haziri]}
+          - {id: student-attendance, label: View Attendance, route: /attendance, keywords: [attendance, hazri, haazri, haziri]}
           - {id: instruction-plan, label: View Instruction Plans, keywords: [IP]}
           - {id: lab-manuals, label: View Lab Manuals}
           - {id: makeup-classes, label: View MakeUp and Adjustment Details, keywords: [makeup, adjustment]}

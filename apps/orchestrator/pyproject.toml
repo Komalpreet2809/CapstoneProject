@@ -6,6 +6,9 @@ requires-python = ">=3.11,<3.12"
 dependencies = [
   "voiceserve-common",
   "uvicorn[standard]>=0.38",
+  "langgraph>=1.2",
+  "anthropic>=2.3",
+  "httpx>=0.28",
 ]
 
 [tool.uv.sources]

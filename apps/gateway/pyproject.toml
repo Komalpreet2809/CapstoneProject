@@ -6,6 +6,11 @@ requires-python = ">=3.11,<3.12"
 dependencies = [
   "voiceserve-common",
   "uvicorn[standard]>=0.38",
+  "livekit-agents>=1.8",
+  "livekit-plugins-deepgram>=1.8",
+  "livekit-plugins-silero>=1.8",
+  "livekit-api>=1.2",
+  "httpx>=0.28",
 ]
 
 [tool.uv.sources]

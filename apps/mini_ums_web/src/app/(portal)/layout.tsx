@@ -24,7 +24,16 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
           <Suspense fallback={<div className="flex-1" />}>
             <TopNav />
           </Suspense>
-          <Suspense fallback={<div className="size-10 rounded-full bg-stone-100" />}>
+          {/* Same footprint as the loaded block, so the menus don't shift when it arrives. */}
+          <Suspense
+            fallback={
+              <div className="flex shrink-0 items-center gap-2.5 py-1 pr-1 pl-2">
+                <div className="hidden h-9 w-56 rounded-md bg-stone-100 xl:block" />
+                <div className="size-10 rounded-full bg-stone-100" />
+                <div className="size-4" />
+              </div>
+            }
+          >
             <Identity />
           </Suspense>
         </div>

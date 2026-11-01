@@ -6,7 +6,7 @@ COMPOSE ?= docker compose
 UV ?= uv
 
 .DEFAULT_GOAL := help
-.PHONY: help up down restart logs ps smoke seed install test e2e openapi lint fmt hooks clean
+.PHONY: help up down restart logs ps smoke seed latency install test e2e openapi lint fmt hooks clean
 
 # $(info) prints from make itself; plain `echo` is not an executable on Windows.
 help:
@@ -18,6 +18,7 @@ help:
 	$(info - ps       show service status)
 	$(info - smoke    check every service answers and is ready)
 	$(info - seed     replace the Mini UMS data with freshly generated synthetic data)
+	$(info - latency  p50/p95 per voice pipeline stage from recent turns)
 	$(info - install  install Python and JS dependencies for local development)
 	$(info - test     run the Python test suite)
 	$(info - e2e      re-seed, then run the browser tests against the running stack)
@@ -47,6 +48,9 @@ smoke:
 
 seed:
 	$(COMPOSE) exec -T mini-ums-api python -m mini_ums_api.seed
+
+latency:
+	$(UV) run --all-packages python scripts/latency.py
 
 install:
 	$(UV) sync --all-packages

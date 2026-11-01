@@ -8,9 +8,10 @@ with citations, and opens any portal page.
 It runs against the **Mini UMS**, a self-built portal with fully synthetic data. No real
 university system or student data is ever used.
 
-**Status:** M1 (foundation) done: every service starts, reports healthy and is checked in CI.
-See [docs/plan.md](docs/plan.md) for milestones and [docs/decisions.md](docs/decisions.md)
-for design decisions.
+**Status:** M3 (voice MVP) done. The Univra portal (M2) works end to end, and the assistant
+answers attendance questions by voice and by text. See [docs/plan.md](docs/plan.md) for
+milestones, [docs/architecture.md](docs/architecture.md) for how a voice turn flows, and
+[docs/decisions.md](docs/decisions.md) for design decisions.
 
 ## Quick start
 
@@ -34,6 +35,19 @@ make up      # build and start everything, wait until healthy, run smoke checks
 Log in to the Mini UMS with any demo account listed on its login page (development only).
 All data is synthetic; `make seed` resets it.
 
+### The voice assistant
+
+Tap the mic button (bottom right) or type a question, e.g. *"Am I short in any course?"* or
+*"How many classes can I miss in CSE 316?"*.
+
+- **No keys:** typing works; intent comes from free keyword rules. Voice says it isn't set up.
+- **Voice:** put `DEEPGRAM_API_KEY` (speech in and out) in `.env`, and optionally
+  `ANTHROPIC_API_KEY` (intent), then `make up`. Paid calls stop at `DAILY_BUDGET_USD` a day.
+- **Replay mode:** `REPLAY_MODE=true make up` runs voice with recorded transcripts and a tone
+  for speech, free and offline (this is what CI uses). It "hears" the recorded questions in
+  order, whatever you say.
+- `make latency` prints p50/p95 per pipeline stage.
+
 On Windows, install the tools with `winget install ezwinports.make` and
 `winget install astral-sh.uv` (then open a new terminal), and start Docker Desktop before
 running `make up`. The Makefile works from PowerShell, cmd and Git Bash.
@@ -49,6 +63,7 @@ running `make up`. The Makefile works from PowerShell, cmd and Git Bash.
 | `make test` | Python tests (API tests use the `make up` database) |
 | `make e2e` | Re-seed, then run the browser tests against the running stack (uses installed Chrome; `E2E_CHANNEL=` for Playwright's Chromium) |
 | `make seed` | Replace the Mini UMS data with fresh synthetic data |
+| `make latency` | p50/p95 per voice pipeline stage from recent turns |
 | `make openapi` | Regenerate the frozen API contract `docs/api/openapi.json` after a deliberate change |
 | `make lint` | ruff, mypy, eslint, tsc |
 | `make fmt` | Auto-format Python |

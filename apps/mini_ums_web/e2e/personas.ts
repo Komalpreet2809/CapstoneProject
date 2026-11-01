@@ -20,3 +20,12 @@ export async function logIn(page: Page, regNo: string, password: string) {
 export async function expectDashboard(page: Page) {
   await expect(page.getByRole("heading", { name: "Important Links" })).toBeVisible();
 }
+
+/** The login pop-up is modal; close it (without acknowledging) when it appears. */
+export async function closeDrivePopup(page: Page) {
+  const drives = page.getByRole("dialog", { name: "Campus Drive Notifications" });
+  await drives
+    .waitFor({ state: "visible", timeout: 4000 })
+    .then(() => drives.getByRole("button", { name: "Close" }).click())
+    .catch(() => undefined);
+}

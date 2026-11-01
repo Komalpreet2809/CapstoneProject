@@ -64,7 +64,13 @@ export function MegaMenu({ menus }: { menus: Menu[] }) {
               aria-expanded={isOpen}
               aria-controls="mega-panel"
               onClick={() => setOpen(isOpen ? null : menu.id)}
-              onMouseEnter={() => open && open !== ALL && setOpen(menu.id)}
+              // Only real pointer movement switches menus: when content streams in and the
+              // header shifts under a resting cursor, the browser reports zero movement.
+              onPointerMove={(e) => {
+                if ((e.movementX || e.movementY) && open && open !== ALL && !isOpen) {
+                  setOpen(menu.id);
+                }
+              }}
               className={`flex items-center gap-1 border-b-2 px-2.5 text-sm font-medium whitespace-nowrap transition-colors xl:px-3 ${
                 isOpen
                   ? "border-marigold-400 text-brand-800"
