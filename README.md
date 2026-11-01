@@ -64,6 +64,7 @@ running `make up`. The Makefile works from PowerShell, cmd and Git Bash.
 | `make e2e` | Re-seed, then run the browser tests against the running stack (uses installed Chrome; `E2E_CHANNEL=` for Playwright's Chromium) |
 | `make seed` | Replace the Mini UMS data with fresh synthetic data |
 | `make latency` | p50/p95 per voice pipeline stage from recent turns |
+| `make share` | Public https demo link to this laptop (all-in-one image + Cloudflare quick tunnel; needs `cloudflared`) |
 | `make openapi` | Regenerate the frozen API contract `docs/api/openapi.json` after a deliberate change |
 | `make lint` | ruff, mypy, eslint, tsc |
 | `make fmt` | Auto-format Python |

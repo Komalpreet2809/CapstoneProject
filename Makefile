@@ -6,7 +6,7 @@ COMPOSE ?= docker compose
 UV ?= uv
 
 .DEFAULT_GOAL := help
-.PHONY: help up down restart logs ps smoke seed latency install test e2e openapi lint fmt hooks clean deploy-space
+.PHONY: help up down restart logs ps smoke seed latency install test e2e openapi lint fmt hooks clean deploy-space share
 
 # $(info) prints from make itself; plain `echo` is not an executable on Windows.
 help:
@@ -28,6 +28,7 @@ help:
 	$(info - hooks    install the pre-commit hooks (secret scan, ruff, hygiene))
 	$(info - clean    stop the stack and delete its data volume)
 	$(info - deploy-space  publish the committed tree to the Hugging Face Space demo)
+	$(info - share    run the demo image and share it at a public https link (Cloudflare quick tunnel))
 
 up:
 	$(COMPOSE) up -d --build --wait --wait-timeout 300
@@ -92,3 +93,11 @@ clean:
 # The public demo: an all-in-one image built by Hugging Face from the committed tree (D-038).
 deploy-space:
 	bash scripts/deploy_space.sh
+
+# A free public link to this laptop: the all-in-one demo image behind a Cloudflare quick tunnel.
+# The link is printed by cloudflared and changes on every run; stop with Ctrl+C.
+share:
+	docker build -f infra/deploy/huggingface/Dockerfile -t univra-space:local .
+	-docker rm -f univra-space
+	docker run -d --name univra-space --restart unless-stopped -p 127.0.0.1:7860:7860 univra-space:local
+	cloudflared tunnel --no-autoupdate --url http://localhost:7860
