@@ -1,0 +1,10 @@
+# LF everywhere so Dockerfiles, shell scripts and the Makefile work inside Linux containers,
+# even on Windows machines with core.autocrlf=true.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.wav binary
+*.mp3 binary
+*.pdf binary
+*.ico binary

@@ -1,0 +1,10 @@
+[project]
+name = "voiceserve-eval"
+version = "0.1.0"
+description = "Evaluation harness: datasets, metrics, simulator and reports"
+requires-python = ">=3.11,<3.12"
+dependencies = []
+
+[build-system]
+requires = ["uv_build>=0.13.6,<0.14"]
+build-backend = "uv_build"

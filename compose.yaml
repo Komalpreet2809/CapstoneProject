@@ -1,0 +1,174 @@
+# VoiceServe local stack. `make up` builds everything and returns once every service is healthy.
+# Host ports and credentials can be overridden in .env (see .env.example); .env is optional.
+#
+# Service names are hyphenated because they double as hostnames on the Compose network.
+# Each service receives only the variables it needs (decision D-013).
+name: voiceserve
+
+x-common-env: &common-env
+  ENVIRONMENT: ${ENVIRONMENT:-dev}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  REPLAY_MODE: ${REPLAY_MODE:-false}
+  LANG_STRATEGY: ${LANG_STRATEGY:-hybrid}
+  DAILY_BUDGET_USD: ${DAILY_BUDGET_USD:-5}
+
+x-python-healthcheck: &python-healthcheck
+  test:
+    - CMD
+    - python
+    - -c
+    - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=3)
+  interval: 5s
+  timeout: 5s
+  retries: 24
+  start_period: 10s
+
+x-node-healthcheck: &node-healthcheck
+  test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+  interval: 5s
+  timeout: 5s
+  retries: 24
+  start_period: 10s
+
+services:
+  db:
+    image: pgvector/pgvector:0.8.7-pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-voiceserve}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-voiceserve}
+      POSTGRES_DB: ${POSTGRES_DB:-voiceserve}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "${DB_HOST_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4.12-alpine
+    ports:
+      - "${REDIS_HOST_PORT:-6380}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  livekit:
+    image: livekit/livekit-server:v1.13.11
+    # Dev mode uses the placeholder key pair devkey/secret. Local development only.
+    command: ["--dev", "--bind", "0.0.0.0", "--node-ip", "${LIVEKIT_NODE_IP:-127.0.0.1}"]
+    ports:
+      - "${LIVEKIT_HTTP_PORT:-7880}:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:7880/"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  mini-ums-api:
+    build:
+      context: .
+      dockerfile: infra/docker/python-service.Dockerfile
+      args: { PACKAGE: mini-ums-api, MODULE: mini_ums_api }
+    environment:
+      <<: *common-env
+      DATABASE_URL: postgresql://${POSTGRES_USER:-voiceserve}:${POSTGRES_PASSWORD:-voiceserve}@db:5432/${POSTGRES_DB:-voiceserve}
+    ports:
+      - "${MINI_UMS_API_PORT:-8001}:8000"
+    healthcheck: *python-healthcheck
+    depends_on:
+      db: { condition: service_healthy }
+    restart: unless-stopped
+
+  orchestrator:
+    build:
+      context: .
+      dockerfile: infra/docker/python-service.Dockerfile
+      args: { PACKAGE: orchestrator, MODULE: orchestrator }
+    environment:
+      <<: *common-env
+      REDIS_URL: redis://redis:6379/0
+      MINI_UMS_API_URL: http://mini-ums-api:8000
+    ports:
+      - "${ORCHESTRATOR_PORT:-8002}:8000"
+    healthcheck: *python-healthcheck
+    depends_on:
+      redis: { condition: service_healthy }
+      mini-ums-api: { condition: service_healthy }
+    restart: unless-stopped
+
+  gateway:
+    build:
+      context: .
+      dockerfile: infra/docker/python-service.Dockerfile
+      args: { PACKAGE: gateway, MODULE: gateway }
+    environment:
+      <<: *common-env
+      ORCHESTRATOR_URL: http://orchestrator:8000
+      LIVEKIT_URL: ws://livekit:7880
+    ports:
+      - "${GATEWAY_PORT:-8003}:8000"
+    healthcheck: *python-healthcheck
+    depends_on:
+      orchestrator: { condition: service_healthy }
+      livekit: { condition: service_healthy }
+    restart: unless-stopped
+
+  widget:
+    build: ./apps/widget
+    ports:
+      - "${WIDGET_PORT:-4100}:80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+  mini-ums-web:
+    build:
+      context: ./apps/mini_ums_web
+      dockerfile: ../../infra/docker/nextjs.Dockerfile
+    environment:
+      # Browser-facing URL: the page tells the visitor's browser where to load the widget from.
+      WIDGET_URL: http://localhost:${WIDGET_PORT:-4100}/widget.js
+    ports:
+      - "${MINI_UMS_WEB_PORT:-3000}:3000"
+    healthcheck: *node-healthcheck
+    depends_on:
+      mini-ums-api: { condition: service_healthy }
+      widget: { condition: service_healthy }
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: ./apps/dashboard
+      dockerfile: ../../infra/docker/nextjs.Dockerfile
+    environment:
+      STATUS_TARGETS: >-
+        mini_ums_api=http://mini-ums-api:8000/ready,
+        orchestrator=http://orchestrator:8000/ready,
+        gateway=http://gateway:8000/ready,
+        livekit=http://livekit:7880/,
+        widget=http://widget/health,
+        mini_ums_web=http://mini-ums-web:3000/api/health
+    ports:
+      - "${DASHBOARD_PORT:-3001}:3000"
+    healthcheck: *node-healthcheck
+    depends_on:
+      gateway: { condition: service_healthy }
+      mini-ums-web: { condition: service_healthy }
+    restart: unless-stopped
+
+volumes:
+  pgdata:

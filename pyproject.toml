@@ -1,0 +1,74 @@
+# Virtual workspace root: no package of its own, just the member list and shared tool config.
+[tool.uv.workspace]
+members = [
+  "libs/common",
+  "apps/mini_ums_api",
+  "apps/orchestrator",
+  "apps/gateway",
+  "rag",
+  "language",
+  "sentiment",
+  "eval",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8",
+  "pytest-asyncio>=1",
+  "ruff>=0.17",
+  "mypy>=1.18",
+  "pre-commit>=4",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["apps/mini_ums_web", "apps/dashboard", "apps/widget"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "ASYNC", "RUF"]
+# The brief's banner text is "Demo – synthetic data" (en dash).
+allowed-confusables = ["–"]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+  "voiceserve_common",
+  "voiceserve_rag",
+  "voiceserve_language",
+  "voiceserve_sentiment",
+  "voiceserve_eval",
+  "mini_ums_api",
+  "orchestrator",
+  "gateway",
+]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+plugins = ["pydantic.mypy"]
+files = [
+  "libs/common/src",
+  "apps/mini_ums_api/src",
+  "apps/orchestrator/src",
+  "apps/gateway/src",
+  "rag/src",
+  "language/src",
+  "sentiment/src",
+  "eval/src",
+  "scripts",
+]
+
+[[tool.mypy.overrides]]
+module = ["asyncpg", "asyncpg.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+addopts = "--import-mode=importlib -q"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = [
+  "libs/common/tests",
+  "apps/mini_ums_api/tests",
+  "apps/orchestrator/tests",
+  "apps/gateway/tests",
+]

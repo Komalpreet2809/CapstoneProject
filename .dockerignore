@@ -1,0 +1,20 @@
+# Build context for the Python services is the repo root (uv workspace).
+# Keep it small: no VCS, envs, caches, JS build output or docs.
+.git
+.github
+.env
+.env.*
+!.env.example
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/node_modules
+**/.next
+apps/mini_ums_web
+apps/dashboard
+apps/widget
+docs
+eval/results
+*.pdf

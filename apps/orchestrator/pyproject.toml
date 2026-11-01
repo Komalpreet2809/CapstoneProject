@@ -1,0 +1,16 @@
+[project]
+name = "orchestrator"
+version = "0.1.0"
+description = "VoiceServe agent: LangGraph state graph, tools, guardrails and prompts"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+  "voiceserve-common",
+  "uvicorn[standard]>=0.38",
+]
+
+[tool.uv.sources]
+voiceserve-common = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.13.6,<0.14"]
+build-backend = "uv_build"
