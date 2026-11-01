@@ -95,3 +95,10 @@ async def test_demo_accounts_only_in_dev(client: httpx.AsyncClient) -> None:
         transport=httpx.ASGITransport(app=prod), base_url="http://test"
     ) as c:
         assert (await c.get("/dev/demo-accounts")).status_code == 404
+
+    # A public demo can list them explicitly.
+    demo = create_app(Settings(environment="prod", demo_accounts=True), checks={})
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=demo), base_url="http://test"
+    ) as c:
+        assert (await c.get("/dev/demo-accounts")).status_code == 200

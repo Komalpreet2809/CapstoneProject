@@ -6,7 +6,7 @@ COMPOSE ?= docker compose
 UV ?= uv
 
 .DEFAULT_GOAL := help
-.PHONY: help up down restart logs ps smoke seed latency install test e2e openapi lint fmt hooks clean
+.PHONY: help up down restart logs ps smoke seed latency install test e2e openapi lint fmt hooks clean deploy-space
 
 # $(info) prints from make itself; plain `echo` is not an executable on Windows.
 help:
@@ -27,6 +27,7 @@ help:
 	$(info - fmt      auto-format and auto-fix Python code)
 	$(info - hooks    install the pre-commit hooks (secret scan, ruff, hygiene))
 	$(info - clean    stop the stack and delete its data volume)
+	$(info - deploy-space  publish the committed tree to the Hugging Face Space demo)
 
 up:
 	$(COMPOSE) up -d --build --wait --wait-timeout 300
@@ -87,3 +88,7 @@ hooks:
 
 clean:
 	$(COMPOSE) down -v --remove-orphans
+
+# The public demo: an all-in-one image built by Hugging Face from the committed tree (D-038).
+deploy-space:
+	bash scripts/deploy_space.sh

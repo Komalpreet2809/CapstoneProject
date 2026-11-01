@@ -1,0 +1,28 @@
+# The Space's single public port. Hugging Face terminates HTTPS in front of it and sets the
+# X-Forwarded-* headers, which are passed through so the portal builds correct redirects.
+{
+	admin off
+	auto_https off
+	servers {
+		trusted_proxies static 0.0.0.0/0 ::/0
+	}
+}
+
+:7860 {
+	encode gzip
+
+	handle /widget.js {
+		root * /app/widget
+		header Access-Control-Allow-Origin "*"
+		header Cache-Control "no-cache"
+		file_server
+	}
+
+	handle /healthz {
+		respond "ok" 200
+	}
+
+	handle {
+		reverse_proxy 127.0.0.1:3000
+	}
+}

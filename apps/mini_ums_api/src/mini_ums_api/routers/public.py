@@ -75,7 +75,7 @@ async def events(pool: Pool, limit: Annotated[int, Query(ge=1, le=50)] = 5) -> l
 
 @router.get("/dev/demo-accounts", response_model=list[DemoAccount], include_in_schema=False)
 async def demo_accounts(settings: AppSettings) -> list[DemoAccount]:
-    if settings.environment != "dev":
+    if not settings.show_demo_accounts:
         raise HTTPException(status.HTTP_404_NOT_FOUND)
     return [
         DemoAccount(reg_no=p.reg_no, name=p.name, password=PERSONA_PASSWORD, scenario=p.scenario)

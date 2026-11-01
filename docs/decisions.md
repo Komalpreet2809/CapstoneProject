@@ -281,3 +281,24 @@ weight becomes a problem.
 to reach itself there, so the `gateway-worker` service uses `network_mode: service:livekit`. On
 LiveKit Cloud (or a server with a real node IP) this isn't needed; the worker then just
 needs `LIVEKIT_URL`.
+
+### D-038 — The public demo runs as one container on a free Hugging Face Space
+*Deployment · 2026-11-01 · Accepted*
+
+A free host with no card was needed. Hugging Face Spaces run a Docker image for free (2 vCPU,
+16 GB RAM) but expose one HTTP port and nothing else. So the demo uses an all-in-one image
+(`infra/deploy/huggingface/`): Postgres + pgvector, Redis, the three Python services, the
+portal and the widget under supervisord, with Caddy on the one port. Everything but Caddy
+listens on 127.0.0.1. Hugging Face terminates HTTPS, so session cookies are `Secure`.
+
+Trade-offs, acceptable for a demo of synthetic data:
+- The database lives in the container and is re-seeded on every restart. Spaces also sleep
+  after 48 hours without visitors.
+- One environment for all processes, so the per-service variable split (D-013) doesn't apply
+  inside it. Provider keys are Space secrets.
+- WebRTC media needs ports a Space can't open, so voice requires LiveKit Cloud (free tier):
+  set `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` and `DEEPGRAM_API_KEY` as Space
+  secrets. Until then the assistant is text-only.
+
+The Docker Compose stack stays the reference setup (and what CI tests). `make deploy-space`
+publishes the committed tree, never uncommitted files.

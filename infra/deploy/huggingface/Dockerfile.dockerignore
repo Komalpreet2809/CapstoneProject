@@ -1,0 +1,24 @@
+# Build context for the all-in-one Space image: like the root .dockerignore, but the portal
+# and the widget are needed here. The deploy script installs this as the bundle's .dockerignore.
+.git
+.github
+.claude
+.env
+.env.*
+!.env.example
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/node_modules
+**/.next
+**/dist
+**/test-results
+**/playwright-report
+apps/dashboard
+apps/mini_ums_web/e2e
+apps/mini_ums_web/playwright.config.ts
+docs
+eval/results
+*.pdf
