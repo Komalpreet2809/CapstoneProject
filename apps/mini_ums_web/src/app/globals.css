@@ -1,1 +1,51 @@
 @import "tailwindcss";
+
+/* Univra identity: deep lagoon teal with a marigold accent. Original to this project;
+   no real university's name, crest or colours are used. */
+@theme {
+  --color-brand-50: #eef8f8;
+  --color-brand-100: #d4eeee;
+  --color-brand-200: #a9dcdd;
+  --color-brand-300: #74c2c4;
+  --color-brand-400: #3fa2a6;
+  --color-brand-500: #23868b;
+  --color-brand-600: #186c72;
+  --color-brand-700: #14575d;
+  --color-brand-800: #11474c;
+  --color-brand-900: #0d3a3e;
+  --color-brand-950: #062326;
+
+  --color-marigold-50: #fff9eb;
+  --color-marigold-100: #ffeec6;
+  --color-marigold-200: #ffdb88;
+  --color-marigold-300: #ffc34a;
+  --color-marigold-400: #f9a91f;
+  --color-marigold-500: #e58a0b;
+
+  --animate-marquee: marquee 60s linear infinite;
+  --animate-fade-in: fade-in 0.15s ease-out;
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+dialog::backdrop {
+  background: rgb(6 35 38 / 0.55);
+}

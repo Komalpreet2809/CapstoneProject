@@ -31,6 +31,9 @@ make up      # build and start everything, wait until healthy, run smoke checks
 
 `.env` is optional; copy `.env.example` to change ports or add provider keys later.
 
+Log in to the Mini UMS with any demo account listed on its login page (development only).
+All data is synthetic; `make seed` resets it.
+
 On Windows, install the tools with `winget install ezwinports.make` and
 `winget install astral-sh.uv` (then open a new terminal), and start Docker Desktop before
 running `make up`. The Makefile works from PowerShell, cmd and Git Bash.
@@ -43,7 +46,10 @@ running `make up`. The Makefile works from PowerShell, cmd and Git Bash.
 | `make logs s=gateway` | Follow one service's logs (omit `s=` for all) |
 | `make smoke` | Check every service is up and ready |
 | `make install` | Install Python and JS dependencies for local development |
-| `make test` | Python tests |
+| `make test` | Python tests (API tests use the `make up` database) |
+| `make e2e` | Re-seed, then run the browser tests against the running stack (uses installed Chrome; `E2E_CHANNEL=` for Playwright's Chromium) |
+| `make seed` | Replace the Mini UMS data with fresh synthetic data |
+| `make openapi` | Regenerate the frozen API contract `docs/api/openapi.json` after a deliberate change |
 | `make lint` | ruff, mypy, eslint, tsc |
 | `make fmt` | Auto-format Python |
 | `make hooks` | Install pre-commit hooks (secret scan, ruff, file hygiene) |

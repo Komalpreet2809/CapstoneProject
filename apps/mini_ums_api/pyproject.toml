@@ -6,6 +6,9 @@ requires-python = ">=3.11,<3.12"
 dependencies = [
   "voiceserve-common",
   "uvicorn[standard]>=0.38",
+  "pyyaml>=6",
+  "faker>=37",
+  "tzdata>=2025.2",
 ]
 
 [tool.uv.sources]

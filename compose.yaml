@@ -142,6 +142,8 @@ services:
     environment:
       # Browser-facing URL: the page tells the visitor's browser where to load the widget from.
       WIDGET_URL: http://localhost:${WIDGET_PORT:-4100}/widget.js
+      # Server-side only: Next.js calls the API; the browser never sees this URL or the token.
+      MINI_UMS_API_URL: http://mini-ums-api:8000
     ports:
       - "${MINI_UMS_WEB_PORT:-3000}:3000"
     healthcheck: *node-healthcheck

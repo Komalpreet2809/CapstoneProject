@@ -16,6 +16,20 @@ jobs:
   python:
     name: Python (ruff, mypy, pytest)
     runs-on: ubuntu-24.04
+    # API tests run against a real Postgres; REQUIRE_DB makes them fail rather than skip.
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.7-pg16
+        env:
+          POSTGRES_USER: voiceserve
+          POSTGRES_PASSWORD: voiceserve
+          POSTGRES_DB: voiceserve
+        ports: ["5433:5432"]
+        options: >-
+          --health-cmd "pg_isready -U voiceserve -d voiceserve"
+          --health-interval 2s --health-timeout 5s --health-retries 30
+    env:
+      REQUIRE_DB: "1"
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10
@@ -64,7 +78,7 @@ jobs:
         run: ./gitleaks git --redact --verbose .
 
   stack:
-    name: Compose smoke test
+    name: Compose smoke and browser tests
     runs-on: ubuntu-24.04
     needs: [python, js]
     steps:
@@ -73,6 +87,20 @@ jobs:
         run: docker compose up -d --build --wait --wait-timeout 300
       - name: Smoke checks
         run: python3 scripts/smoke.py --wait 30
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/mini_ums_web/package-lock.json
+      - name: Install browser tests
+        working-directory: apps/mini_ums_web
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Browser tests (fresh seed)
+        run: |
+          docker compose exec -T mini-ums-api python -m mini_ums_api.seed
+          npm --prefix apps/mini_ums_web run e2e
       - name: Show state on failure
         if: failure()
         run: |

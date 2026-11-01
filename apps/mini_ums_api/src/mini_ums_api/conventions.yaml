@@ -1,0 +1,388 @@
+# Mini UMS conventions: every format, policy, category and menu entry in one place.
+#
+# Placeholders until the real formats and menu land in docs/reference/. Changing a format
+# here (and re-seeding) is meant to be the only change needed.
+# Served read-only at GET /catalogue/* so the web app and the agent use the same data.
+
+version: 1
+
+ids:
+  reg_no:
+    pattern: "^[0-9]{8}$"
+    example: "24100001"
+    note: 2-digit intake year + 6-digit serial (placeholder)
+  vid:
+    pattern: "^V[0-9]{5}$"
+    example: "V40213"
+    note: display-only virtual ID shown in the top bar (placeholder)
+  section:
+    example: "K24CS1"
+    note: campus letter + intake year + programme code + section number (placeholder)
+  ticket_number:
+    sequence_digits: 4
+    check_digit: damm
+    note: 4-digit sequence + 1 Damm check digit; the voice agent reads it digit by digit
+  request_id:
+    format: "{dept}/{month}-{yy}/{number}"
+    example: "HST/Nov-26/10019"
+
+policies:
+  attendance_min_percent: 75
+  password_max_age_days: 90
+  login_max_failures: 5
+  login_lockout_minutes: 15
+  session_hours: 8
+  hostel_leave_max_days: 30
+  placement_remind_later_hours: 24
+
+programmes:
+  - {code: CS, name: "B.Tech. Computer Science and Engineering", school: School of Computing}
+  - {code: EC, name: "B.Tech. Electronics and Communication Engineering", school: School of Electronics}
+  - {code: ME, name: "B.Tech. Mechanical Engineering", school: School of Mechanical Sciences}
+  - {code: BB, name: "BBA (Business Administration)", school: School of Business}
+  - {code: BS, name: "B.Sc. (Hons.) Data Science", school: School of Computing}
+
+hostel_blocks:
+  boys: [BH-1, BH-2, BH-3, BH-4, BH-5, BH-6]
+  girls: [GH-1, GH-2, GH-3, GH-4]
+
+rms:
+  declarations:
+    version: "2026-11"
+    items:
+      - The information I give in this request is true and complete to the best of my knowledge.
+      - I will raise one issue per request and choose the category that matches it, so it reaches the right department.
+      - I understand that staff may contact me, or visit the location I mention, to resolve this request.
+      - I will not use the request system for false complaints, abusive language or matters unrelated to university services.
+      - I understand that my request and its status are recorded in RMS History, and that a closed request can be reopened only through feedback.
+  categories:
+    - id: HOSTEL
+      label: Hostel
+      dept: HST
+      needs_location: true
+      sub_categories: [Electrical, Plumbing, Carpentry, Housekeeping, Furniture, Water Cooler, Pest Control]
+    - id: IT
+      label: IT Services
+      dept: ITS
+      needs_location: true
+      sub_categories: [Wi-Fi, LAN Port, UMS Login, University Email, Software Installation]
+    - id: ACADEMIC
+      label: Academic
+      dept: ACD
+      needs_location: false
+      sub_categories: [Marks Discrepancy, Attendance Discrepancy, Timetable Clash, Course Registration, Duty Leave]
+    - id: EXAMINATION
+      label: Examination
+      dept: EXM
+      needs_location: false
+      sub_categories: [Result Discrepancy, Admit Card, Seating Plan, Re-appear Form]
+    - id: FEE
+      label: Fee and Accounts
+      dept: ACC
+      needs_location: false
+      sub_categories: [Payment Not Updated, Refund, Fee Receipt, Scholarship]
+    - id: LIBRARY
+      label: Library
+      dept: LIB
+      needs_location: false
+      sub_categories: [Fine Waiver, Book Not Available, Account Issue]
+    - id: TRANSPORT
+      label: Transport
+      dept: TRN
+      needs_location: false
+      sub_categories: [Bus Pass, Route or Timing, Driver Conduct]
+    - id: OTHER
+      label: Other
+      dept: GEN
+      needs_location: false
+      sub_categories: [General Query]
+
+# --- Menu catalogue ----------------------------------------------------------------------
+# Group structure follows the real portal (docs/reference/ums-structure.md); names tied to
+# one university are made neutral. Entries without `route` open the shared placeholder page
+# (/m/<id>). `keywords` help search and, later, voice navigation (Hindi/Punjabi/Hinglish).
+
+# Left rail, top to bottom.
+sidebar: [dashboard, mobile-app, live-classes, my-class, counselling-appointment]
+
+# "Important Links" pills on the dashboard.
+shortcuts:
+  - hostel-booking
+  - rms-log-request
+  - fee-dashboard
+  - issued-books
+  - academic-calendar
+  - emergency-numbers
+  - academic-certificate
+  - part-time-jobs
+  - exam-date-sheet
+  - placement-drives
+
+menu:
+  - id: academics
+    label: Academics
+    groups:
+      - label: Cohorts
+        entries:
+          - {id: career-profiling, label: Career Profiling}
+          - {id: cohort-progress, label: My Cohorts Progress}
+          - {id: cohort-status, label: My Cohorts Status}
+          - {id: select-cohort, label: Select Cohort}
+      - label: Examination System
+        entries:
+          - {id: academic-result, label: Academic Result, keywords: [result, marks, grades, cgpa, natija]}
+          - {id: academic-certificate, label: Application for Academic Certificate, keywords: [certificate]}
+          - {id: certified-curriculum, label: Application for Certified Curriculum}
+          - {id: degree-extension, label: Application for Degree Extension}
+          - {id: recommendation-letter, label: Application for Letter of Recommendation, keywords: [LOR]}
+          - {id: mooc-certification, label: Application for MOOC Certification}
+          - {id: provisional-transcript, label: Application for Provisional Academic Transcript, keywords: [transcript]}
+          - {id: term-off, label: Application for Term Off}
+          - {id: backlog-registration, label: Backlog Course Registration, keywords: [backlog]}
+          - {id: document-repository, label: Document Repository}
+          - {id: exam-attendance, label: Examination Attendance}
+          - {id: exam-date-sheet, label: Examination Date Sheet, keywords: [exam, datesheet, pariksha, seating, seat]}
+          - {id: faculty-feedback, label: Faculty Feedback}
+          - {id: omr-scrutiny, label: OMR Sheet Scrutiny}
+          - {id: online-transactions, label: Online Transactions}
+          - {id: peer-tutoring, label: Peer Tutoring Preference}
+          - {id: additional-tutoring, label: Registration for Additional Tutoring Classes}
+          - {id: r-grade-registration, label: Registration for R Grade Courses}
+          - {id: revaluation-registration, label: Registration for Re-Evaluation, keywords: [revaluation, recheck]}
+          - {id: reappear-registration, label: Registration for ReAppear, keywords: [reappear, re-appear]}
+          - {id: reappear-late-fee, label: Registration for ReAppear (Late Fee)}
+          - {id: reappear-scrutiny, label: Registration for ReAppear Scrutiny}
+          - {id: remedial-classes, label: Registration for Remedial/Tuition Classes}
+          - {id: academic-support, label: Registration for Student Academic Support Program}
+          - {id: summer-backlog, label: Summer Term Backlog Course Preference}
+      - label: Learning Management System (LMS)
+        entries:
+          - {id: training-feedback, label: Feedback of Training Programmes}
+          - {id: assignment-download, label: Assignment Download}
+          - {id: assignment-upload, label: Assignment Upload}
+          - {id: pending-assignments, label: View Assignments, keywords: [assignment, homework, pending]}
+          - {id: career-aspiration, label: Career Aspiration Plan}
+          - {id: community-development, label: Community Development Form}
+          - {id: cr-nomination, label: CR Nomination}
+          - {id: credit-transfer, label: Credit Transfer}
+          - {id: event-duty-leaves, label: Event Duty Leaves, keywords: [duty leave, DL]}
+          - {id: language-lab, label: Language Lab Slot Booking}
+          - {id: lab-dashboard, label: Laboratory Dashboard}
+          - {id: meeting-proceedings, label: Meeting Proceedings}
+          - {id: value-added-certificates, label: My Value Added Course Certificates}
+          - {id: personality-test, label: Personality Assessment Test}
+          - {id: practical-upload, label: Practical Upload}
+          - {id: value-added-registration, label: Registration for Value Added Course}
+          - {id: change-of-programme, label: Request for Change of Program}
+          - {id: self-learning, label: Self Learning Material}
+          - {id: semester-exchange, label: Semester Exchange Registration}
+          - {id: session-calendar, label: Session Calendar}
+          - {id: skill-set, label: Skill Set}
+          - {id: syllabus, label: View Academic Course Syllabus, keywords: [syllabus]}
+          - {id: student-attendance, label: View Attendance, keywords: [attendance, hazri, haazri, haziri]}
+          - {id: instruction-plan, label: View Instruction Plans, keywords: [IP]}
+          - {id: lab-manuals, label: View Lab Manuals}
+          - {id: makeup-classes, label: View MakeUp and Adjustment Details, keywords: [makeup, adjustment]}
+          - {id: programme-scheme, label: View Program Scheme}
+          - {id: time-table, label: View Time Table, keywords: [timetable, schedule, classes, lecture]}
+      - label: Library Management System
+        entries:
+          - {id: discussion-room, label: Discussion Room Booking}
+          - {id: dissertation-library, label: Dissertation/Thesis}
+          - {id: e-resources, label: E-Resources}
+          - {id: issued-books, label: Issued Books, keywords: [books, kitab, library fine]}
+          - {id: library-search, label: Library Search, keywords: [library, books, kitab]}
+      - label: Ph.D. Induction
+        entries:
+          - {id: phd-induction, label: Ph.D. Freshmen Induction}
+      - label: Placement Services
+        entries:
+          - {id: placement-registration, label: Career Services Registration}
+          - {id: exit-career-services, label: Exit From Career Services}
+          - {id: internship-letter, label: Internship Recommendation Letter}
+          - {id: internship-application, label: OJT/Internship Application}
+          - {id: internship-attendance, label: OJT/Internship Attendance}
+          - {id: placement-documents, label: Placement Document Repository}
+          - {id: placement-drives, label: Placement Portal, keywords: [placement, jobs, company, drive, naukri]}
+          - {id: academic-benefits, label: Special Academic Benefits Request}
+          - {id: placement-coordinator, label: Student Placement Coordinator Registration}
+      - label: Polling
+        entries:
+          - {id: specialisation-polling, label: Elective Specialization Polling}
+          - {id: electives-polling, label: Electives Polling, keywords: [elective]}
+          - {id: minor-preference, label: Minor Area Preference}
+      - label: Project/ Dissertation
+        entries:
+          - {id: project-topics, label: Interdisciplinary Project Topics}
+          - {id: project-attendance, label: Project / Dissertation Attendance View}
+          - {id: project-marks, label: Project / Dissertation Marks View}
+          - {id: supervisor-info, label: Project / Dissertation Supervisor Information}
+          - {id: project-groups, label: Project Courses Group Formulation}
+          - {id: project-certificate, label: Upload Research Project/ Internship Certificate}
+      - label: Research and Development
+        entries:
+          - {id: duty-leave-pvr, label: Apply for Duty Leave and PVR}
+          - {id: research-program, label: International Research Program}
+          - {id: ipr-idea, label: IPR Idea Request}
+          - {id: research-achievements, label: Research Achievements Report}
+          - {id: scholar-guidelines, label: Research Scholar Guidelines and Formats}
+          - {id: supervisor-selection, label: Supervisor Selection Module}
+      - label: Skill Development Courses
+        entries:
+          - {id: cpe-certificates, label: CPE Certificate Details}
+          - {id: skill-courses, label: Skill Development Courses}
+          - {id: skill-program, label: Skill Development Program}
+
+  - id: administrative
+    label: Administrative
+    groups:
+      - label: Alumni Services
+        entries:
+          - {id: alumni-membership, label: Alumni Membership Fee}
+          - {id: alumni-mentor, label: Alumni Mentor Selection}
+          - {id: alumni-profile, label: Update Alumni Profile}
+      - label: Central Mail System (CMS)
+        entries:
+          - {id: mail-receiving, label: Central Mail Receiving}
+          - {id: mail-tracking, label: Tracking Incoming Mail}
+      - label: Fee and Scholarship System
+        entries:
+          - {id: fee-dashboard, label: Fee Dashboard, keywords: [fee, fees, dues, payment, pay]}
+          - {id: fee-certificates, label: Apply and Download Fee related Certificates}
+          - {id: fee-refund, label: Apply for Fee Refund/Reimbursement, keywords: [refund]}
+          - {id: outer-scholarship, label: Apply for Outer Agency Scholarship}
+          - {id: loan-documents, label: Bank Loan Document Submission}
+          - {id: fee-deposit-confirmation, label: Confirmation of Fee Deposited}
+          - {id: scholarship-award, label: Scholarship Award Request, keywords: [scholarship]}
+          - {id: scholarship-continuation, label: Scholarship Continuation Request}
+          - {id: scholarship-letter, label: Scholarship Letter}
+          - {id: scholarship-policies, label: Scholarship Policies}
+          - {id: fee-schedule, label: View Fee Payment Schedule/ Guidelines}
+          - {id: fee-receipts, label: View Fee Receipts, keywords: [receipt]}
+          - {id: fee-statement, label: View Fee Status, keywords: [fee status, statement]}
+      - label: My Profile
+        entries:
+          - {id: virtual-id-card, label: My Virtual ID Card}
+          - {id: my-profile, label: Profile Update, keywords: [profile]}
+      - label: Residential Services
+        entries:
+          - {id: electricity-consumption, label: Electricity Consumption View}
+          - {id: library-extended-time, label: Extended Time Request (Central Library)}
+          - {id: hostel-booking, label: Hostel Booking, keywords: [hostel, room]}
+          - {id: hostel-booking-term2, label: Hostel Booking (Term-II)}
+          - {id: hostel-short-stay, label: Hostel Booking For Short Duration}
+          - {id: cloak-room, label: Hostel Cloak Room Application}
+          - {id: hostel-cancellation, label: Hostel Facilities Cancellation}
+          - {id: hostel-guidelines, label: Hostel Guidelines}
+          - {id: hostel-leave, label: Hostel Leave Application, keywords: [leave, chutti, ghar, outing]}
+          - {id: hostel-leave-slip, label: Hostel Leave Slip}
+          - {id: hostel-mutual-shifting, label: Hostel Mutual Shifting}
+          - {id: housekeeping-rating, label: House Keeping Rating}
+          - {id: special-food, label: Special Food Services, keywords: [mess, food, khana]}
+          - {id: hostel-committee, label: Student Hostel Committee Registration}
+          - {id: special-leave, label: Student Hostel Special Leave Request}
+          - {id: reporting-slip, label: View Residential Reporting Slip}
+      - label: Security and Safety
+        entries:
+          - {id: case-details, label: Case Details}
+          - {id: rfid-application, label: RFID Application Form}
+          - {id: parent-pass, label: Sponsored Parent Pass Request, keywords: [visitor, gate pass]}
+          - {id: case-statement, label: Upload Case Statement}
+
+  - id: important-links
+    label: Important Links
+    groups:
+      - label: Capstone Dissertation Internships
+        entries:
+          - {id: internship-ca-format, label: External CA Format for Internship}
+          - {id: external-examiner-guidelines, label: Guidelines for Inviting External Examiners}
+          - {id: dissertation-guidelines, label: "Guidelines for Master's Dissertation"}
+          - {id: capstone-guidelines, label: Guidelines for Project Courses including Capstone}
+      - label: Change Password
+        entries:
+          - {id: change-password, label: Change Portal Password, keywords: [password]}
+          - {id: reset-internet-password, label: Reset Internet Password, keywords: [wifi password]}
+      - label: Miscellaneous Links
+        entries:
+          - {id: duplicate-id-card, label: Apply Duplicate ID/ Transport Card}
+          - {id: appointment-system, label: Appointment System}
+          - {id: accommodation-details, label: Compulsory Accommodation Details}
+          - {id: emergency-numbers, label: Emergency Contact Numbers, keywords: [emergency, ambulance, security]}
+          - {id: authority-timings, label: Interaction Timings with Higher Authorities}
+          - {id: appointment-request, label: Post Request for Appointment}
+          - {id: academic-calendar, label: View Academic Calendar, keywords: [calendar, holidays, chutti]}
+          - {id: campus-map, label: View Campus Map}
+          - {id: medical-staff, label: View List of Medical Staff}
+          - {id: lost-and-found, label: View Lost and Found Items}
+          - {id: messages, label: View My Messages, keywords: [messages, teacher]}
+      - label: Policies, Rules, Guidelines and Formats
+        entries:
+          - {id: academic-honour, label: Academic Honour To Regular Students}
+          - {id: attendance-policy, label: Attendance Marking Policy, keywords: [attendance rule]}
+          - {id: download-formats, label: Download Formats}
+          - {id: dress-code, label: Dress Code and Uniform Policy}
+          - {id: exam-guidelines, label: Examination Instructions and Guidelines}
+          - {id: credit-transfer-guidelines, label: Guidelines for Credit Transfer as an Option}
+          - {id: library-policy, label: Library Policy}
+          - {id: international-policy, label: Policy for International Students}
+          - {id: scholarship-rules, label: Scholarship to Regular Students}
+          - {id: abroad-policy, label: Semester/ Year Abroad Policy}
+
+  - id: student-services
+    label: Student Services
+    groups:
+      - label: Feedback and Surveys
+        entries:
+          - {id: programme-feedback, label: Feedback for Program Scheme and Courses}
+          - {id: outcome-feedback, label: Feedback on Course Outcome}
+          - {id: course-feedback, label: Feedback on Theory/Practical Courses}
+          - {id: grievances, label: Grievances Description}
+          - {id: guest-lecture-feedback, label: Guest Lecture Feedback}
+          - {id: online-survey, label: Online Survey}
+          - {id: mentor-rating, label: Rate Mentor Meeting}
+          - {id: exit-survey, label: Student Exit Survey}
+          - {id: meeting-feedback, label: Student Meeting Feedback}
+          - {id: walk-in-feedback, label: Walk In Feedback}
+      - label: Health Services
+        entries:
+          - {id: counselling-appointment, label: Counseling Psychologist Appointment, keywords: [counselling, counsellor]}
+          - {id: doctor-appointment, label: Doctor Appointment, keywords: [doctor, medical]}
+      - label: Relationship Management System (RMS)
+        entries:
+          - {id: rms-log-request, label: Log Request, route: /rms, keywords: [rms, complaint, request, shikayat]}
+          - {id: rms-history, label: View Request Status, route: "/rms?tab=history", keywords: [ticket, status, complaint status, rms history]}
+      - label: Student Welfare
+        entries:
+          - {id: skill-courses-approved, label: Approved Skill Courses}
+          - {id: campus-opportunities, label: Campus Opportunities Registration}
+          - {id: club-attendance, label: Club Attendance View}
+          - {id: community-services, label: Community Services Registration}
+          - {id: event-registration, label: Event Registration}
+          - {id: idea-management, label: Idea Management System}
+          - {id: inventory-record, label: My Inventory Record}
+          - {id: part-time-jobs, label: Part-Time Job Registration, keywords: [part time, job]}
+          - {id: achievements, label: Participation and Achievements Dashboard}
+          - {id: welfare-policies, label: Policies}
+          - {id: press-release, label: Press Release Request}
+          - {id: event-participation, label: Student Event Participation}
+          - {id: interest-groups, label: Student Interest Group Registration}
+          - {id: student-organisations, label: Student Organization Registration}
+          - {id: transport-preference, label: Transport Preference, keywords: [bus, transport]}
+          - {id: uniform-size, label: Uniform Size Selection}
+          - {id: vendor-services, label: Vendor Services Search}
+
+  # Quick Links is personal: students pin entries from the menu search (kept in the browser).
+  # These portal pages are reached from the left rail and dashboard cards, not the panels.
+  - id: quick-links
+    label: Quick Links
+    groups:
+      - label: Portal pages
+        entries:
+          - {id: dashboard, label: Dashboard, route: /, keywords: [home, dashboard]}
+          - {id: my-courses, label: My Courses, keywords: [courses, subjects]}
+          - {id: my-class, label: My Class, keywords: [today, class]}
+          - {id: mobile-app, label: Univra Mobile App}
+          - {id: live-classes, label: Live Classes, keywords: [online class]}
+          - {id: happening, label: Happening, keywords: [news]}
+          - {id: events, label: Events}
+          - {id: announcements, label: Important Announcements, keywords: [notice, announcement]}

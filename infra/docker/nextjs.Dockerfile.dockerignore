@@ -6,3 +6,9 @@ out
 npm-debug.log*
 *.tsbuildinfo
 next-env.d.ts
+# Browser tests: never ship saved test sessions or reports in an image.
+e2e
+playwright.config.ts
+test-results
+playwright-report
+blob-report

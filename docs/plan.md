@@ -93,3 +93,97 @@ Done. Verified on the Windows dev machine:
   channel (stretch).
 - **Student ID format** for `conventions.yaml` (e.g. 8-digit numeric vs. prefixed like
   `DEMO001`). It drives the log masker, login and the seed generator.
+
+---
+
+## M2 — Mini UMS
+
+**Goal:** opening `localhost:3000` feels like our university's UMS (same structure, layout
+and flows) with an original identity: own name (**Univra**), logo and colours.
+
+**Done when:** login → dashboard looks and navigates like the real UMS layout, every menu
+entry opens, and the RMS flow works end to end on synthetic data. Plus the brief's M2
+criteria: API tests pass and the API contract is frozen.
+
+**Reference:** `docs/reference/ums-structure.md` records the real portal's layout, flows and
+menu groups (observed 2026-11-01). The menu catalogue in `conventions.yaml` follows it; page
+specs for the inner pages (attendance, timetable, fees, …) are still to come.
+
+**Progress (2026-11-01):** every "done when" item is met.
+
+- Backend: 160 Python tests, including the contract drift test against the frozen
+  `docs/api/openapi.json` (`make openapi` regenerates it after a deliberate change).
+- Front end built to match the reference: login; shell (announcement strip, right-aligned
+  mega-menus, search with Quick Links pins, student block, labelled rail); dashboard
+  (Important Links, banner, Happening, My Messages, My Courses, Fee, Pending Assignments,
+  Events, Placement Details, Campus Drive pop-up); standalone RMS (Log Request, RMS
+  History); shared placeholder page.
+- Browser tests: 9 Playwright tests (`make e2e`, re-seeds first) cover login/lockout/logout,
+  redirect-and-return, the drive pop-up and dashboard cards, mega-menu → placeholder,
+  search + Quick Links, RMS log → duplicate → note, and feedback that reopens a request.
+- CI now runs the API tests against a Postgres service (they were silently skipped before)
+  and the browser tests after the Compose smoke test. Neither has run on GitHub yet.
+
+Deferred: the Important Announcements board (needs categorised notices in the API).
+
+### Answers to the M1 open questions
+
+- **OTP:** login is registration number + password (per the M2 spec). OTP is not part of
+  web login; where it fits (agent step-up before writes, or phone only) is decided in M4.
+- **IDs:** placeholder registration number = 8 digits (2-digit intake year + 6-digit
+  serial). Replaced from `docs/reference/` when the real format arrives.
+
+### Backend (`mini_ums_api`)
+
+1. **Schema** as numbered SQL migrations applied on startup: students, sessions, courses,
+   enrollments, attendance, marks, timetable, fees, assignments, exams and seating, tickets
+   and ticket events, hostel leaves, announcements, news, events, messages, placement drives.
+2. **Auth:** registration number + password (scrypt), opaque session tokens (only a hash
+   stored), 8-hour expiry, lockout after 5 failures, password age shown as days to expiry.
+3. **Identity (rule 1):** every personal route is `/me/...` and takes the student from the
+   token. A `student_id`/`reg_no` in the query that doesn't match → 403; request bodies
+   forbid unknown fields.
+4. **RMS:** declarations must be accepted (version recorded on the ticket, rule 10);
+   `Idempotency-Key` header required (rule 3); a similar open ticket → 409 with that ticket so
+   the UI can offer "add a note" instead (rule 7); ticket number = 4-digit sequence + Damm
+   check digit (rule 9), shown as `DEPT/Mon-YY/NNNNN`; history with counts; notes; feedback
+   after closure, where "not resolved" reopens the ticket.
+5. **Read APIs for every MVP feature** (attendance with % computed in code, timetable,
+   fees, exams + seating, assignments, hostel leave), so the contract can freeze now even
+   though their dedicated pages wait for page specs.
+6. **Seed generator:** fixed seed, dates relative to an anchor day, correlated
+   distributions, deliberate edge cases, six stable demo personas. Runs automatically when
+   the database is empty; `make seed` re-seeds.
+7. **Contract:** `docs/api/openapi.json` is generated from the app; a test fails if the
+   app drifts from it.
+
+### Front end (`mini_ums_web`)
+
+1. Login page (original design, dev-only demo account hint).
+2. App shell: announcement ribbon, top bar with logo, five mega-menus (full-width grouped
+   panels), search over all menu entries, student identity block, narrow icon sidebar.
+3. Dashboard: shortcut pills, banner carousel, Happening, My Messages, My Courses (with
+   attendance rings), Fee, Pending Assignments, Events, placement-drive modal, password
+   expiry notice.
+4. RMS module with its own header: Log Request (declarations → form → duplicate prompt →
+   confirmation) and RMS History (counters, cards, feedback).
+5. One shared placeholder page for every other menu entry.
+6. Voice widget on every page (unchanged).
+
+The browser never sees the session token: it lives in an httpOnly cookie, and Next.js
+server code calls the API.
+
+### Tests
+
+- Unit: Damm check digit, request-ID format/parse, password hashing, lockout, seed
+  determinism and distributions.
+- API (against a real Postgres): auth, identity guard, every `/me` route, RMS create /
+  idempotency / duplicate / notes / feedback-reopen, hostel leave validation.
+- Contract: generated OpenAPI equals the committed file.
+- End to end (Playwright): login → dashboard → mega-menu → placeholder page → RMS log
+  request → history → feedback.
+
+### Not in M2
+
+Dedicated pages for attendance, timetable, fees, exams and hostel leave (waiting for page
+specs); OTP; staff-side ticket handling (M6); adapter clients for the agent (M3/M4).

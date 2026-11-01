@@ -1,0 +1,3034 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Mini UMS API",
+    "description": "\nSynthetic university management system. **Demo data only.**\n\nPersonal routes live under `/me` and take the student from the session token\n(`Authorization: Bearer <token>` from `POST /auth/login`), never from the request.\nWrites require an `Idempotency-Key` header.\n",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Ready",
+        "operationId": "ready_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login",
+        "operationId": "login_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Locked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Logout",
+        "operationId": "logout_auth_logout_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/me": {
+      "get": {
+        "tags": [
+          "student"
+        ],
+        "summary": "Profile",
+        "operationId": "profile_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentProfile"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/me/courses": {
+      "get": {
+        "tags": [
+          "student"
+        ],
+        "summary": "Courses",
+        "operationId": "courses_me_courses_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CourseOut"
+                  },
+                  "type": "array",
+                  "title": "Response Courses Me Courses Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/me/attendance": {
+      "get": {
+        "tags": [
+          "student"
+        ],
+        "summary": "Attendance",
+        "operationId": "attendance_me_attendance_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Course code, e.g. CSE326",
+              "title": "Course"
+            },
+            "description": "Course code, e.g. CSE326"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AttendanceOut"
+                  },
+                  "title": "Response Attendance Me Attendance Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/timetable": {
+      "get": {
+        "tags": [
+          "student"
+        ],
+        "summary": "Timetable",
+        "operationId": "timetable_me_timetable_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Defaults to today",
+              "title": "Date"
+            },
+            "description": "Defaults to today"
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only classes starting at/after",
+              "title": "After"
+            },
+            "description": "Only classes starting at/after"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimetableOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/fees": {
+      "get": {
+        "tags": [
+          "student"
+        ],
+        "summary": "Fees",
+        "operationId": "fees_me_fees_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeesOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/me/exams": {
+      "get": {
+        "tags": [
+          "student"
+        ],
+        "summary": "Exams",
+        "operationId": "exams_me_exams_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ExamOut"
+                  },
+                  "type": "array",
+                  "title": "Response Exams Me Exams Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/me/assignments": {
+      "get": {
+        "tags": [
+          "student"
+        ],
+        "summary": "Assignments",
+        "operationId": "assignments_me_assignments_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "pending",
+                "all"
+              ],
+              "type": "string",
+              "default": "pending",
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AssignmentOut"
+                  },
+                  "title": "Response Assignments Me Assignments Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/messages": {
+      "get": {
+        "tags": [
+          "student"
+        ],
+        "summary": "Messages",
+        "operationId": "messages_me_messages_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MessageOut"
+                  },
+                  "title": "Response Messages Me Messages Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/placement-drives": {
+      "get": {
+        "tags": [
+          "student"
+        ],
+        "summary": "Placement Drives",
+        "operationId": "placement_drives_me_placement_drives_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pending_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Only unread drives that are not snoozed (login pop-up)",
+              "default": false,
+              "title": "Pending Only"
+            },
+            "description": "Only unread drives that are not snoozed (login pop-up)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlacementDriveOut"
+                  },
+                  "title": "Response Placement Drives Me Placement Drives Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/placement-drives/ack": {
+      "post": {
+        "tags": [
+          "student"
+        ],
+        "summary": "Acknowledge Drives",
+        "operationId": "acknowledge_drives_me_placement_drives_ack_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DriveAckIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/me/tickets": {
+      "get": {
+        "tags": [
+          "rms"
+        ],
+        "summary": "History",
+        "operationId": "history_me_tickets_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketHistoryOut"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "rms"
+        ],
+        "summary": "Create Ticket",
+        "operationId": "create_ticket_me_tickets_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "description": "Unique per logical request; retries with the same key return the original",
+              "title": "Idempotency-Key"
+            },
+            "description": "Unique per logical request; retries with the same key return the original"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketOut"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Retry of an earlier request (same key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Similar open request exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DuplicateTicketOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request, or key reused with a different request"
+          }
+        }
+      }
+    },
+    "/me/tickets/latest": {
+      "get": {
+        "tags": [
+          "rms"
+        ],
+        "summary": "Latest",
+        "operationId": "latest_me_tickets_latest_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketDetailOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/me/tickets/{number}": {
+      "get": {
+        "tags": [
+          "rms"
+        ],
+        "summary": "Get Ticket",
+        "operationId": "get_ticket_me_tickets__number__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "number",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{5}$",
+              "description": "5-digit ticket number, e.g. 10019",
+              "title": "Number"
+            },
+            "description": "5-digit ticket number, e.g. 10019"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketDetailOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/tickets/{number}/notes": {
+      "post": {
+        "tags": [
+          "rms"
+        ],
+        "summary": "Add Note",
+        "operationId": "add_note_me_tickets__number__notes_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "number",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{5}$",
+              "description": "5-digit ticket number, e.g. 10019",
+              "title": "Number"
+            },
+            "description": "5-digit ticket number, e.g. 10019"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoteIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketDetailOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/tickets/{number}/feedback": {
+      "post": {
+        "tags": [
+          "rms"
+        ],
+        "summary": "Give Feedback",
+        "description": "After closure: 'resolved' keeps it closed; 'not resolved' reopens it.",
+        "operationId": "give_feedback_me_tickets__number__feedback_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "number",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{5}$",
+              "description": "5-digit ticket number, e.g. 10019",
+              "title": "Number"
+            },
+            "description": "5-digit ticket number, e.g. 10019"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketDetailOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/hostel-leaves": {
+      "get": {
+        "tags": [
+          "hostel"
+        ],
+        "summary": "List Leaves",
+        "operationId": "list_leaves_me_hostel_leaves_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LeaveOut"
+                  },
+                  "title": "Response List Leaves Me Hostel Leaves Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "hostel"
+        ],
+        "summary": "Apply Leave",
+        "operationId": "apply_leave_me_hostel_leaves_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "description": "Unique per logical request; retries with the same key return the original",
+              "title": "Idempotency-Key"
+            },
+            "description": "Unique per logical request; retries with the same key return the original"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeaveCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaveOut"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Retry of an earlier request (same key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaveOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Overlaps an existing leave",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/catalogue/menu": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Menu Catalogue",
+        "operationId": "menu_catalogue_catalogue_menu_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MenuCatalogue"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/catalogue/rms": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Rms Catalogue",
+        "operationId": "rms_catalogue_catalogue_rms_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Rms"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/catalogue/policies": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Policies",
+        "operationId": "policies_catalogue_policies_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Policies"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/content/announcements": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Announcements",
+        "operationId": "announcements_content_announcements_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AnnouncementOut"
+                  },
+                  "type": "array",
+                  "title": "Response Announcements Content Announcements Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/content/news": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "News",
+        "operationId": "news_content_news_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 5,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NewsOut"
+                  },
+                  "title": "Response News Content News Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/content/events": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Events",
+        "operationId": "events_content_events_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 5,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventOut"
+                  },
+                  "title": "Response Events Content Events Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AnnouncementOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "ribbon",
+              "banner"
+            ],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "menu_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Menu Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "body",
+          "menu_id"
+        ],
+        "title": "AnnouncementOut"
+      },
+      "AssignmentOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "course_code": {
+            "type": "string",
+            "title": "Course Code"
+          },
+          "course_title": {
+            "type": "string",
+            "title": "Course Title"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "last_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Last Date"
+          },
+          "max_marks": {
+            "type": "integer",
+            "title": "Max Marks"
+          },
+          "submitted": {
+            "type": "boolean",
+            "title": "Submitted"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "days_left": {
+            "type": "integer",
+            "title": "Days Left"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "course_code",
+          "course_title",
+          "title",
+          "kind",
+          "last_date",
+          "max_marks",
+          "submitted",
+          "submitted_at",
+          "days_left"
+        ],
+        "title": "AssignmentOut"
+      },
+      "AttendanceOut": {
+        "properties": {
+          "course_code": {
+            "type": "string",
+            "title": "Course Code"
+          },
+          "course_title": {
+            "type": "string",
+            "title": "Course Title"
+          },
+          "held": {
+            "type": "integer",
+            "title": "Held"
+          },
+          "attended": {
+            "type": "integer",
+            "title": "Attended"
+          },
+          "percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent",
+            "description": "Null when no classes have been held yet"
+          },
+          "threshold": {
+            "type": "number",
+            "title": "Threshold"
+          },
+          "meets_threshold": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meets Threshold"
+          },
+          "classes_needed": {
+            "type": "integer",
+            "title": "Classes Needed",
+            "description": "Consecutive classes to attend to reach threshold"
+          },
+          "can_miss": {
+            "type": "integer",
+            "title": "Can Miss",
+            "description": "Classes that can be missed while staying at threshold"
+          },
+          "last_updated": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Updated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "course_code",
+          "course_title",
+          "held",
+          "attended",
+          "percent",
+          "threshold",
+          "meets_threshold",
+          "classes_needed",
+          "can_miss",
+          "last_updated"
+        ],
+        "title": "AttendanceOut"
+      },
+      "CourseOut": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "credits": {
+            "type": "integer",
+            "title": "Credits"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "term": {
+            "type": "string",
+            "title": "Term"
+          },
+          "faculty": {
+            "type": "string",
+            "title": "Faculty"
+          },
+          "roll_no": {
+            "type": "string",
+            "title": "Roll No"
+          },
+          "group_no": {
+            "type": "integer",
+            "title": "Group No"
+          },
+          "attendance": {
+            "$ref": "#/components/schemas/AttendanceOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "title",
+          "credits",
+          "kind",
+          "term",
+          "faculty",
+          "roll_no",
+          "group_no",
+          "attendance"
+        ],
+        "title": "CourseOut"
+      },
+      "Declarations": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "version",
+          "items"
+        ],
+        "title": "Declarations"
+      },
+      "DriveAckIn": {
+        "properties": {
+          "drive_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Drive Ids"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "read",
+              "later"
+            ],
+            "title": "Action"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "drive_ids",
+          "action"
+        ],
+        "title": "DriveAckIn"
+      },
+      "DuplicateTicketOut": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "similar": {
+            "$ref": "#/components/schemas/TicketOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail",
+          "similar"
+        ],
+        "title": "DuplicateTicketOut"
+      },
+      "ErrorOut": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorOut"
+      },
+      "EventOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "venue": {
+            "type": "string",
+            "title": "Venue"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "venue",
+          "starts_at"
+        ],
+        "title": "EventOut"
+      },
+      "ExamOut": {
+        "properties": {
+          "course_code": {
+            "type": "string",
+            "title": "Course Code"
+          },
+          "course_title": {
+            "type": "string",
+            "title": "Course Title"
+          },
+          "exam_type": {
+            "type": "string",
+            "title": "Exam Type"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "start": {
+            "type": "string",
+            "format": "time",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "time",
+            "title": "End"
+          },
+          "seating": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Seat"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "course_code",
+          "course_title",
+          "exam_type",
+          "date",
+          "start",
+          "end",
+          "seating"
+        ],
+        "title": "ExamOut"
+      },
+      "FeeItem": {
+        "properties": {
+          "head": {
+            "type": "string",
+            "title": "Head"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          },
+          "paid": {
+            "type": "number",
+            "title": "Paid"
+          },
+          "due": {
+            "type": "number",
+            "title": "Due"
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Due Date"
+          },
+          "overdue": {
+            "type": "boolean",
+            "title": "Overdue"
+          }
+        },
+        "type": "object",
+        "required": [
+          "head",
+          "amount",
+          "paid",
+          "due",
+          "due_date",
+          "overdue"
+        ],
+        "title": "FeeItem"
+      },
+      "Feedback": {
+        "properties": {
+          "resolved": {
+            "type": "boolean",
+            "title": "Resolved"
+          },
+          "rating": {
+            "type": "integer",
+            "title": "Rating"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resolved",
+          "rating",
+          "comment",
+          "at"
+        ],
+        "title": "Feedback"
+      },
+      "FeedbackIn": {
+        "properties": {
+          "resolved": {
+            "type": "boolean",
+            "title": "Resolved"
+          },
+          "rating": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Rating"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "resolved",
+          "rating"
+        ],
+        "title": "FeedbackIn"
+      },
+      "FeesOut": {
+        "properties": {
+          "currency": {
+            "type": "string",
+            "const": "INR",
+            "title": "Currency",
+            "default": "INR"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FeeItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total_due": {
+            "type": "number",
+            "title": "Total Due"
+          },
+          "overdue_due": {
+            "type": "number",
+            "title": "Overdue Due"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total_due",
+          "overdue_due"
+        ],
+        "title": "FeesOut"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "LeaveCreate": {
+        "properties": {
+          "from_date": {
+            "type": "string",
+            "format": "date",
+            "title": "From Date"
+          },
+          "to_date": {
+            "type": "string",
+            "format": "date",
+            "title": "To Date"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 5,
+            "title": "Reason"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "web",
+              "voice"
+            ],
+            "title": "Channel",
+            "default": "web"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "from_date",
+          "to_date",
+          "reason"
+        ],
+        "title": "LeaveCreate"
+      },
+      "LeaveOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "from_date": {
+            "type": "string",
+            "format": "date",
+            "title": "From Date"
+          },
+          "to_date": {
+            "type": "string",
+            "format": "date",
+            "title": "To Date"
+          },
+          "days": {
+            "type": "integer",
+            "title": "Days"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "APPROVED",
+              "REJECTED",
+              "CANCELLED"
+            ],
+            "title": "Status"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "web",
+              "voice"
+            ],
+            "title": "Channel"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "from_date",
+          "to_date",
+          "days",
+          "reason",
+          "status",
+          "channel",
+          "created_at"
+        ],
+        "title": "LeaveOut"
+      },
+      "LoginIn": {
+        "properties": {
+          "reg_no": {
+            "type": "string",
+            "pattern": "^[0-9]{8}$",
+            "title": "Reg No"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Password"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reg_no",
+          "password"
+        ],
+        "title": "LoginIn"
+      },
+      "LoginOut": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "student": {
+            "$ref": "#/components/schemas/StudentProfile"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "expires_at",
+          "student"
+        ],
+        "title": "LoginOut"
+      },
+      "Menu": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/MenuGroup"
+            },
+            "type": "array",
+            "title": "Groups"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "groups"
+        ],
+        "title": "Menu"
+      },
+      "MenuCatalogue": {
+        "properties": {
+          "menu": {
+            "items": {
+              "$ref": "#/components/schemas/Menu"
+            },
+            "type": "array",
+            "title": "Menu"
+          },
+          "sidebar": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sidebar"
+          },
+          "shortcuts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Shortcuts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "menu",
+          "sidebar",
+          "shortcuts"
+        ],
+        "title": "MenuCatalogue"
+      },
+      "MenuEntry": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "route": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Keywords",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "MenuEntry"
+      },
+      "MenuGroup": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/MenuEntry"
+            },
+            "type": "array",
+            "title": "Entries"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "label",
+          "entries"
+        ],
+        "title": "MenuGroup"
+      },
+      "MessageOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "sender_name": {
+            "type": "string",
+            "title": "Sender Name"
+          },
+          "sender_role": {
+            "type": "string",
+            "title": "Sender Role"
+          },
+          "subject": {
+            "type": "string",
+            "title": "Subject"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "sent_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Sent At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "sender_name",
+          "sender_role",
+          "subject",
+          "body",
+          "sent_at"
+        ],
+        "title": "MessageOut"
+      },
+      "NewsOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "published_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Published On"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "summary",
+          "published_on"
+        ],
+        "title": "NewsOut"
+      },
+      "NoteIn": {
+        "properties": {
+          "note": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Note"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "note"
+        ],
+        "title": "NoteIn"
+      },
+      "PlacementDriveOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "company": {
+            "type": "string",
+            "title": "Company"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "package_lpa": {
+            "type": "number",
+            "title": "Package Lpa"
+          },
+          "drive_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Drive Date"
+          },
+          "register_by": {
+            "type": "string",
+            "format": "date",
+            "title": "Register By"
+          },
+          "read": {
+            "type": "boolean",
+            "title": "Read"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "company",
+          "role",
+          "package_lpa",
+          "drive_date",
+          "register_by",
+          "read"
+        ],
+        "title": "PlacementDriveOut"
+      },
+      "Policies": {
+        "properties": {
+          "attendance_min_percent": {
+            "type": "number",
+            "exclusiveMaximum": 100.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Attendance Min Percent"
+          },
+          "password_max_age_days": {
+            "type": "integer",
+            "title": "Password Max Age Days"
+          },
+          "login_max_failures": {
+            "type": "integer",
+            "title": "Login Max Failures"
+          },
+          "login_lockout_minutes": {
+            "type": "integer",
+            "title": "Login Lockout Minutes"
+          },
+          "session_hours": {
+            "type": "integer",
+            "title": "Session Hours"
+          },
+          "hostel_leave_max_days": {
+            "type": "integer",
+            "title": "Hostel Leave Max Days"
+          },
+          "placement_remind_later_hours": {
+            "type": "integer",
+            "title": "Placement Remind Later Hours"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "attendance_min_percent",
+          "password_max_age_days",
+          "login_max_failures",
+          "login_lockout_minutes",
+          "session_hours",
+          "hostel_leave_max_days",
+          "placement_remind_later_hours"
+        ],
+        "title": "Policies"
+      },
+      "Rms": {
+        "properties": {
+          "declarations": {
+            "$ref": "#/components/schemas/Declarations"
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/RmsCategory"
+            },
+            "type": "array",
+            "title": "Categories"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "declarations",
+          "categories"
+        ],
+        "title": "Rms"
+      },
+      "RmsCategory": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "dept": {
+            "type": "string",
+            "title": "Dept"
+          },
+          "needs_location": {
+            "type": "boolean",
+            "title": "Needs Location"
+          },
+          "sub_categories": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Sub Categories"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "dept",
+          "needs_location",
+          "sub_categories"
+        ],
+        "title": "RmsCategory"
+      },
+      "Seat": {
+        "properties": {
+          "building": {
+            "type": "string",
+            "title": "Building"
+          },
+          "room": {
+            "type": "string",
+            "title": "Room"
+          },
+          "seat": {
+            "type": "string",
+            "title": "Seat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "building",
+          "room",
+          "seat"
+        ],
+        "title": "Seat"
+      },
+      "StudentProfile": {
+        "properties": {
+          "reg_no": {
+            "type": "string",
+            "title": "Reg No"
+          },
+          "vid": {
+            "type": "string",
+            "title": "Vid"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "programme_code": {
+            "type": "string",
+            "title": "Programme Code"
+          },
+          "programme": {
+            "type": "string",
+            "title": "Programme"
+          },
+          "school": {
+            "type": "string",
+            "title": "School"
+          },
+          "section": {
+            "type": "string",
+            "title": "Section"
+          },
+          "term": {
+            "type": "string",
+            "title": "Term"
+          },
+          "cgpa": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cgpa"
+          },
+          "is_hosteller": {
+            "type": "boolean",
+            "title": "Is Hosteller"
+          },
+          "hostel_block": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hostel Block"
+          },
+          "room": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Room"
+          },
+          "preferred_language": {
+            "type": "string",
+            "title": "Preferred Language"
+          },
+          "password_expires_in_days": {
+            "type": "integer",
+            "title": "Password Expires In Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reg_no",
+          "vid",
+          "name",
+          "programme_code",
+          "programme",
+          "school",
+          "section",
+          "term",
+          "cgpa",
+          "is_hosteller",
+          "hostel_block",
+          "room",
+          "preferred_language",
+          "password_expires_in_days"
+        ],
+        "title": "StudentProfile"
+      },
+      "TicketCounts": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "open": {
+            "type": "integer",
+            "title": "Open"
+          },
+          "closed": {
+            "type": "integer",
+            "title": "Closed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "open",
+          "closed"
+        ],
+        "title": "TicketCounts"
+      },
+      "TicketCreate": {
+        "properties": {
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "sub_category": {
+            "type": "string",
+            "title": "Sub Category"
+          },
+          "block": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block"
+          },
+          "room": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Room"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 3,
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 10,
+            "title": "Description"
+          },
+          "declaration_version": {
+            "type": "string",
+            "title": "Declaration Version"
+          },
+          "allow_duplicate": {
+            "type": "boolean",
+            "title": "Allow Duplicate",
+            "default": false
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "web",
+              "voice"
+            ],
+            "title": "Channel",
+            "default": "web"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "category",
+          "sub_category",
+          "title",
+          "description",
+          "declaration_version"
+        ],
+        "title": "TicketCreate"
+      },
+      "TicketDetailOut": {
+        "properties": {
+          "number": {
+            "type": "string",
+            "title": "Number",
+            "description": "5-digit ticket number (4-digit sequence + check digit)"
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id",
+            "description": "UMS-style display ID: DEPT/Mon-YY/NNNNN"
+          },
+          "speakable": {
+            "type": "string",
+            "title": "Speakable",
+            "description": "Number spaced digit by digit, for text-to-speech"
+          },
+          "dept": {
+            "type": "string",
+            "title": "Dept"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "category_label": {
+            "type": "string",
+            "title": "Category Label"
+          },
+          "sub_category": {
+            "type": "string",
+            "title": "Sub Category"
+          },
+          "block": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block"
+          },
+          "room": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Room"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "IN_PROGRESS",
+              "CLOSED",
+              "REOPENED"
+            ],
+            "title": "Status"
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "NORMAL",
+              "HIGH"
+            ],
+            "title": "Priority"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "web",
+              "voice"
+            ],
+            "title": "Channel"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "closing_remarks": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closing Remarks"
+          },
+          "closed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "feedback": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Feedback"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "can_give_feedback": {
+            "type": "boolean",
+            "title": "Can Give Feedback"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/TicketEventOut"
+            },
+            "type": "array",
+            "title": "Events"
+          }
+        },
+        "type": "object",
+        "required": [
+          "number",
+          "request_id",
+          "speakable",
+          "dept",
+          "category",
+          "category_label",
+          "sub_category",
+          "block",
+          "room",
+          "title",
+          "description",
+          "status",
+          "priority",
+          "channel",
+          "created_at",
+          "updated_at",
+          "closing_remarks",
+          "closed_at",
+          "feedback",
+          "can_give_feedback",
+          "events"
+        ],
+        "title": "TicketDetailOut"
+      },
+      "TicketEventOut": {
+        "properties": {
+          "status_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status From"
+          },
+          "status_to": {
+            "type": "string",
+            "title": "Status To"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "actor": {
+            "type": "string",
+            "enum": [
+              "student",
+              "staff",
+              "system"
+            ],
+            "title": "Actor"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status_from",
+          "status_to",
+          "note",
+          "actor",
+          "at"
+        ],
+        "title": "TicketEventOut"
+      },
+      "TicketHistoryOut": {
+        "properties": {
+          "counts": {
+            "$ref": "#/components/schemas/TicketCounts"
+          },
+          "tickets": {
+            "items": {
+              "$ref": "#/components/schemas/TicketOut"
+            },
+            "type": "array",
+            "title": "Tickets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "counts",
+          "tickets"
+        ],
+        "title": "TicketHistoryOut"
+      },
+      "TicketOut": {
+        "properties": {
+          "number": {
+            "type": "string",
+            "title": "Number",
+            "description": "5-digit ticket number (4-digit sequence + check digit)"
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id",
+            "description": "UMS-style display ID: DEPT/Mon-YY/NNNNN"
+          },
+          "speakable": {
+            "type": "string",
+            "title": "Speakable",
+            "description": "Number spaced digit by digit, for text-to-speech"
+          },
+          "dept": {
+            "type": "string",
+            "title": "Dept"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "category_label": {
+            "type": "string",
+            "title": "Category Label"
+          },
+          "sub_category": {
+            "type": "string",
+            "title": "Sub Category"
+          },
+          "block": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block"
+          },
+          "room": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Room"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "IN_PROGRESS",
+              "CLOSED",
+              "REOPENED"
+            ],
+            "title": "Status"
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "NORMAL",
+              "HIGH"
+            ],
+            "title": "Priority"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "web",
+              "voice"
+            ],
+            "title": "Channel"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "closing_remarks": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closing Remarks"
+          },
+          "closed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "feedback": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Feedback"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "can_give_feedback": {
+            "type": "boolean",
+            "title": "Can Give Feedback"
+          }
+        },
+        "type": "object",
+        "required": [
+          "number",
+          "request_id",
+          "speakable",
+          "dept",
+          "category",
+          "category_label",
+          "sub_category",
+          "block",
+          "room",
+          "title",
+          "description",
+          "status",
+          "priority",
+          "channel",
+          "created_at",
+          "updated_at",
+          "closing_remarks",
+          "closed_at",
+          "feedback",
+          "can_give_feedback"
+        ],
+        "title": "TicketOut"
+      },
+      "TimetableEntry": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "time",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "time",
+            "title": "End"
+          },
+          "course_code": {
+            "type": "string",
+            "title": "Course Code"
+          },
+          "course_title": {
+            "type": "string",
+            "title": "Course Title"
+          },
+          "room": {
+            "type": "string",
+            "title": "Room"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "mandatory": {
+            "type": "boolean",
+            "title": "Mandatory"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "end",
+          "course_code",
+          "course_title",
+          "room",
+          "kind",
+          "mandatory"
+        ],
+        "title": "TimetableEntry"
+      },
+      "TimetableOut": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "weekday": {
+            "type": "string",
+            "title": "Weekday"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/TimetableEntry"
+            },
+            "type": "array",
+            "title": "Entries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "weekday",
+          "entries"
+        ],
+        "title": "TimetableOut"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "description": "Session token from POST /auth/login",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

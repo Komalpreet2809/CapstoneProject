@@ -157,3 +157,62 @@ arguments, and `help` uses make's `$(info)`, so the same Makefile works under `s
 
 `.gitattributes` forces LF. Dockerfiles, shell snippets and the Makefile run inside Linux
 containers; CRLF would break them on Windows machines with `core.autocrlf=true`.
+
+### D-018 — Mirror the real portal's structure, not its identity
+*M2 · 2026-11-01 · Accepted*
+
+Univra copies the real UMS layout, flows and menu groups (recorded in
+`docs/reference/ums-structure.md`, observed read-only from a student's own session). It keeps
+its own name, logo and colours, and names tied to one university are made neutral. A local page
+that looks exactly like a real university login and asks for a password would be a phishing
+look-alike.
+
+### D-019 — The browser never holds the API token
+*M2 · 2026-11-01 · Accepted*
+
+Next.js server code (pages and server actions) calls the Mini UMS API; the session token lives
+in an httpOnly, SameSite=Lax cookie that page scripts, including the voice widget, can't read.
+`proxy.ts` only redirects visitors without a cookie; the API checks the token on every call, and
+a rejected token goes through `/session-expired`, which clears the cookie. `Secure` is switched
+on with `SESSION_COOKIE_SECURE=true` behind https.
+
+### D-020 — Pages stream; nothing calls the API at build time
+*M2 · 2026-11-01 · Accepted*
+
+With Cache Components on, each page prerenders a static shell and streams API data behind
+`<Suspense>` boundaries, so cards load independently. Public reads wait for a request
+(`connection()`); the menu and RMS catalogues are then cached in the server for hours.
+`next build` passes with the API unreachable, which is how the Docker image is built.
+
+### D-021 — RMS is a standalone module
+*M2 · 2026-11-01 · Accepted*
+
+As in the real portal, RMS has its own header and page outside the portal shell, declarations
+are accepted with one "Agree & Proceed", and history uses Total/Open/Closed filters with
+full-width request cards. The browser makes one idempotency key per logical request
+(`crypto.getRandomValues`, which also works over plain http), reuses it on retry and on "log it
+anyway", and drops it when the request changes.
+
+### D-022 — Quick Links are per-browser pins
+*M2 · 2026-11-01 · Accepted*
+
+The real portal's Quick Links menu holds each student's own pinned pages. Univra stores pins in
+`localStorage` (pinned from the menu search), so they don't follow the student to another
+device. Server-side storage can come later if the agent needs to read them.
+
+### D-023 — The API contract is a committed OpenAPI file
+*M2 · 2026-11-01 · Accepted*
+
+`docs/api/openapi.json` is generated from the app (`make openapi`) and committed. A test fails
+whenever the app's schema differs from it, so any API change is a visible, reviewed diff;
+the voice agent's adapters (M3/M4) are written against this file. A second test checks at
+the contract level that no `/me` route accepts a student identifier (rule 1).
+
+### D-024 — Browser tests run against the real stack
+*M2 · 2026-11-01 · Accepted*
+
+Playwright drives the Compose stack, not a mocked server, because the flows under test cross
+the web app, the API and Postgres. The tests change data, so `make e2e` (and CI) re-seed first
+and run them one at a time. Locally they use the installed Chrome (no browser download);
+CI installs Playwright's Chromium. One persona's session is saved once and reused; the saved
+file holds a session cookie, so it is git-ignored and excluded from Docker build contexts.
