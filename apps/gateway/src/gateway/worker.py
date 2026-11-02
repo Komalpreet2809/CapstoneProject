@@ -89,10 +89,41 @@ async def entrypoint(ctx: JobContext) -> None:
         return
 
     await ctx.connect()
+    user_turn_open = False
+    started = asyncio.Event()
+
+    # The widget sees the agent as soon as it joins the room, while the speech models are still
+    # starting, so the turn RPCs are registered first and each waits for the session.
+    async def start_turn(data: rtc.RpcInvocationData) -> str:
+        nonlocal user_turn_open
+        await started.wait()
+        user_turn_open = True
+        session.interrupt()  # barge-in: stop speaking and cancel the reply in progress
+        session.clear_user_turn()
+        session.input.set_audio_enabled(True)
+        return "listening"
+
+    async def end_turn(data: rtc.RpcInvocationData) -> str:
+        nonlocal user_turn_open
+        await started.wait()
+        user_turn_open = False
+        session.commit_user_turn()  # audio stays on until the reply ends, for barge-in
+        return "committed"
+
+    async def cancel_turn(data: rtc.RpcInvocationData) -> str:
+        nonlocal user_turn_open
+        await started.wait()
+        user_turn_open = False
+        session.input.set_audio_enabled(False)
+        session.clear_user_turn()
+        return "cancelled"
+
+    for handler in (start_turn, end_turn, cancel_turn):
+        ctx.room.local_participant.register_rpc_method(handler.__name__, handler)
+
     vad = silero.VAD.load()
     stt_provider, tts_provider = _speech(replay, vad)
     turns = TurnLatency()
-    user_turn_open = False
     tasks: set[asyncio.Task[Any]] = set()
 
     def background(coro: Any) -> None:
@@ -153,32 +184,7 @@ async def entrypoint(ctx: JobContext) -> None:
         room_options=room_io.RoomOptions(close_on_disconnect=True),
     )
     session.input.set_audio_enabled(False)
-
-    participant = ctx.room.local_participant
-
-    async def start_turn(data: rtc.RpcInvocationData) -> str:
-        nonlocal user_turn_open
-        user_turn_open = True
-        session.interrupt()  # barge-in: stop speaking and cancel the reply in progress
-        session.clear_user_turn()
-        session.input.set_audio_enabled(True)
-        return "listening"
-
-    async def end_turn(data: rtc.RpcInvocationData) -> str:
-        nonlocal user_turn_open
-        user_turn_open = False
-        session.commit_user_turn()  # audio stays on until the reply ends, for barge-in
-        return "committed"
-
-    async def cancel_turn(data: rtc.RpcInvocationData) -> str:
-        nonlocal user_turn_open
-        user_turn_open = False
-        session.input.set_audio_enabled(False)
-        session.clear_user_turn()
-        return "cancelled"
-
-    for handler in (start_turn, end_turn, cancel_turn):
-        participant.register_rpc_method(handler.__name__, handler)
+    started.set()
 
 
 if __name__ == "__main__":

@@ -302,3 +302,21 @@ Trade-offs, acceptable for a demo of synthetic data:
 
 The Docker Compose stack stays the reference setup (and what CI tests). `make deploy-space`
 publishes the committed tree, never uncommitted files.
+
+### D-039 — Until a free host fits, the public link is this laptop behind a Cloudflare tunnel
+*Deployment · 2026-11-02 · Accepted*
+
+Docker Spaces turned out to need a paid Hugging Face plan, so D-038's image runs on the
+laptop instead and `make share` opens a Cloudflare quick tunnel to it: free, no account, https.
+The tunnel carries HTTP only, so voice media goes through LiveKit Cloud (free tier) as on a
+Space, and Deepgram does speech. `make share` reads those keys from the git-ignored `.env` and
+passes them to the container through a temporary file, never the command line.
+
+- The link changes on every run and works only while the laptop is awake and online.
+- The container's worker registers under its own agent name (`voiceserve-share`). Otherwise
+  LiveKit could hand a call from the public link to the `make up` worker, which doesn't know
+  that session and leaves.
+- The image installs dependencies before copying the source, with uv and npm caches mounted,
+  so code changes rebuild in seconds. It also lets a build get through a network that breaks
+  some downloads: on campus Wi-Fi a firewall intercepts a share of HTTPS connections, and
+  each retry fetches only what is still missing.

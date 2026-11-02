@@ -94,10 +94,7 @@ clean:
 deploy-space:
 	bash scripts/deploy_space.sh
 
-# A free public link to this laptop: the all-in-one demo image behind a Cloudflare quick tunnel.
-# The link is printed by cloudflared and changes on every run; stop with Ctrl+C.
+# A free public link to this laptop: the all-in-one demo image behind a Cloudflare quick tunnel,
+# with voice keys from .env. The link is printed by cloudflared and changes on every run.
 share:
-	docker build -f infra/deploy/huggingface/Dockerfile -t univra-space:local .
-	-docker rm -f univra-space
-	docker run -d --name univra-space --restart unless-stopped -p 127.0.0.1:7860:7860 univra-space:local
-	cloudflared tunnel --no-autoupdate --url http://localhost:7860
+	bash scripts/share.sh

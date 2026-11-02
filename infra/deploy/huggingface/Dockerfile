@@ -7,7 +7,7 @@
 FROM node:24.22.2-bookworm-slim AS web
 WORKDIR /web
 COPY apps/mini_ums_web/package.json apps/mini_ums_web/package-lock.json ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci
 COPY apps/mini_ums_web/ ./
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
@@ -15,7 +15,7 @@ RUN npm run build
 FROM node:24.22.2-bookworm-slim AS widget
 WORKDIR /widget
 COPY apps/widget/package.json apps/widget/package-lock.json ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci
 COPY apps/widget/ ./
 RUN npm run build
 
@@ -36,7 +36,19 @@ ENV UV_COMPILE_BYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 WORKDIR /app
+# Third-party dependencies first, so source edits don't download them again.
 COPY pyproject.toml uv.lock ./
+COPY libs/common/pyproject.toml libs/common/
+COPY apps/mini_ums_api/pyproject.toml apps/mini_ums_api/
+COPY apps/orchestrator/pyproject.toml apps/orchestrator/
+COPY apps/gateway/pyproject.toml apps/gateway/
+COPY rag/pyproject.toml rag/
+COPY language/pyproject.toml language/
+COPY sentiment/pyproject.toml sentiment/
+COPY eval/pyproject.toml eval/
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv python install 3.11 && uv sync --frozen --no-dev --no-install-workspace --all-packages
+
 COPY libs libs
 COPY apps/mini_ums_api apps/mini_ums_api
 COPY apps/orchestrator apps/orchestrator
@@ -45,7 +57,8 @@ COPY rag rag
 COPY language language
 COPY sentiment sentiment
 COPY eval eval
-RUN uv python install 3.11 && uv sync --frozen --no-dev --no-editable --all-packages
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-editable --all-packages
 
 COPY --from=web /web/.next/standalone /app/web
 COPY --from=web /web/.next/static /app/web/.next/static
