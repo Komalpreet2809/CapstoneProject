@@ -116,13 +116,15 @@ async def test_a_session_id_alone_is_not_enough_for_text_turns(client: httpx.Asy
     assert response.status_code == 200
 
 
-async def test_unknown_and_ended_sessions(client: httpx.AsyncClient) -> None:
+async def test_unknown_and_ended_sessions(
+    client: httpx.AsyncClient, rows: list[dict[str, Any]]
+) -> None:
     response = await client.post("/sessions/nope/turns", json={"text": "hi"}, headers=KEY)
     assert response.status_code == 404
     session_id = await _session(client)
-    assert (await client.get(f"/sessions/{session_id}", headers=KEY)).json()[
-        "first_name"
-    ] == "Aarav"
+    info = (await client.get(f"/sessions/{session_id}", headers=KEY)).json()
+    assert info["first_name"] == "Aarav"
+    assert info["course_titles"] == sorted({row["course_title"] for row in rows})
     assert (await client.delete(f"/sessions/{session_id}", headers=KEY)).status_code == 204
     assert (await client.get(f"/sessions/{session_id}", headers=KEY)).status_code == 404
 

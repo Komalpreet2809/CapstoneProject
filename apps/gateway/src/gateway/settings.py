@@ -19,6 +19,8 @@ class Settings(CommonSettings):
     # Speech providers (D-027). Without a key, and outside replay mode, voice is not offered.
     deepgram_api_key: str = ""
     stt_model: str = "nova-3"
+    # Indian English: the portal's students. Other languages arrive with M5.
+    stt_language: str = "en-IN"
     tts_voice: str = "aura-2-andromeda-en"
     # Voice turns are refused below this remaining daily budget (one turn costs ~$0.01).
     min_budget_for_voice_usd: float = 0.02

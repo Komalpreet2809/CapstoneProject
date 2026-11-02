@@ -30,5 +30,11 @@ docker run -d --name univra-space --restart unless-stopped \
   -p 127.0.0.1:7860:7860 --env-file "$envfile" univra-space:local >/dev/null
 rm -f "$envfile"
 
+# A tunnel that is already running keeps its link, which now reaches the new container.
+if tasklist 2>/dev/null | grep -qi '^cloudflared' || pgrep -x cloudflared >/dev/null 2>&1; then
+  echo "Container updated. The running tunnel keeps its link."
+  exit 0
+fi
+
 cloudflared="$(command -v cloudflared || echo "/c/Program Files (x86)/cloudflared/cloudflared.exe")"
 exec "$cloudflared" tunnel --no-autoupdate --url http://localhost:7860

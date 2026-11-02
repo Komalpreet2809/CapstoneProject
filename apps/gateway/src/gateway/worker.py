@@ -3,8 +3,9 @@
 Per voice session it joins room `vs-<session id>` and runs: Silero VAD + end of turn ->
 streaming STT (Deepgram, or replay) -> the orchestrator (as the "LLM") -> sentence-level TTS
 (Deepgram, or replay). Push-to-talk is three RPCs from the widget: `start_turn` (mic on, and
-interrupt any speech: barge-in), `end_turn`, `cancel_turn`. The mic stays on while the agent
-speaks so the student can also interrupt by talking; it goes off when the agent finishes.
+interrupt any speech: barge-in), `end_turn`, `cancel_turn`. Ending a turn detaches the mic so
+speech-to-text finishes the transcript at once; it is attached again while the agent speaks,
+so the student can also interrupt by talking, and goes off when the agent finishes.
 
 Run with `python -m gateway.worker start` (`dev` reloads on change).
 """
@@ -57,11 +58,21 @@ class VoiceAgent(Agent):
         super().__init__(instructions="")
 
 
-def _speech(replay: bool, vad: Any) -> tuple[Any, Any]:
+# Portal words a general speech model tends to miss. With the student's course titles they go to
+# Deepgram as key terms, which bias recognition toward them (D-040).
+PORTAL_TERMS = ["attendance", "Univra", "RMS", "timetable", "hostel", "fee", "exam"]
+
+
+def _speech(replay: bool, vad: Any, course_titles: list[str]) -> tuple[Any, Any]:
     if replay:
         return lk_stt.StreamAdapter(stt=ReplaySTT(load_transcripts()), vad=vad), ReplayTTS()
     return (
-        deepgram.STT(model=settings.stt_model, api_key=settings.deepgram_api_key),
+        deepgram.STT(
+            model=settings.stt_model,
+            language=settings.stt_language,
+            keyterm=[*PORTAL_TERMS, *course_titles],
+            api_key=settings.deepgram_api_key,
+        ),
         deepgram.TTS(model=settings.tts_voice, api_key=settings.deepgram_api_key),
     )
 
@@ -84,7 +95,8 @@ async def entrypoint(ctx: JobContext) -> None:
 
     ctx.add_shutdown_callback(close_clients)
 
-    if (await client.get(f"/sessions/{session_id}")).status_code != 200:
+    info = await client.get(f"/sessions/{session_id}")
+    if info.status_code != 200:
         log.warning("dispatch for an unknown or expired voice session; leaving")
         return
 
@@ -107,7 +119,13 @@ async def entrypoint(ctx: JobContext) -> None:
         nonlocal user_turn_open
         await started.wait()
         user_turn_open = False
-        session.commit_user_turn()  # audio stays on until the reply ends, for barge-in
+        # Detached, the mic stops feeding room noise to speech-to-text and the session pushes
+        # silence instead, so the final transcript comes at once rather than an interim guess.
+        session.input.set_audio_enabled(False)
+        transcript = await session.commit_user_turn(transcript_timeout=5.0)
+        # Nothing heard and nothing being answered: the widget says so rather than wait.
+        if not transcript.strip() and session.agent_state == "listening":
+            return "empty"
         return "committed"
 
     async def cancel_turn(data: rtc.RpcInvocationData) -> str:
@@ -122,7 +140,7 @@ async def entrypoint(ctx: JobContext) -> None:
         ctx.room.local_participant.register_rpc_method(handler.__name__, handler)
 
     vad = silero.VAD.load()
-    stt_provider, tts_provider = _speech(replay, vad)
+    stt_provider, tts_provider = _speech(replay, vad, info.json().get("course_titles", []))
     turns = TurnLatency()
     tasks: set[asyncio.Task[Any]] = set()
 
@@ -175,7 +193,9 @@ async def entrypoint(ctx: JobContext) -> None:
     @session.on("agent_state_changed")
     def on_agent_state(event: AgentStateChangedEvent) -> None:
         # Mic input is only taken while the student talks or could interrupt a reply.
-        if event.old_state == "speaking" and event.new_state != "speaking" and not user_turn_open:
+        if event.new_state == "speaking":
+            session.input.set_audio_enabled(True)
+        elif event.old_state == "speaking" and not user_turn_open:
             session.input.set_audio_enabled(False)
 
     await session.start(

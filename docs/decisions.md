@@ -312,7 +312,9 @@ The tunnel carries HTTP only, so voice media goes through LiveKit Cloud (free ti
 Space, and Deepgram does speech. `make share` reads those keys from the git-ignored `.env` and
 passes them to the container through a temporary file, never the command line.
 
-- The link changes on every run and works only while the laptop is awake and online.
+- The link changes with each new tunnel and works only while the laptop is awake and
+  online. Run again while the tunnel is up, `make share` replaces the container and the
+  link stays.
 - The container's worker registers under its own agent name (`voiceserve-share`). Otherwise
   LiveKit could hand a call from the public link to the `make up` worker, which doesn't know
   that session and leaves.
@@ -320,3 +322,22 @@ passes them to the container through a temporary file, never the command line.
   so code changes rebuild in seconds. It also lets a build get through a network that breaks
   some downloads: on campus Wi-Fi a firewall intercepts a share of HTTPS connections, and
   each retry fetches only what is still missing.
+
+### D-040 — Speech recognition tuned for push-to-talk and Indian English
+*Voice · 2026-11-02 · Accepted*
+
+The first real test misheard a student badly ("Twenty one. For this morning, what are you?").
+Deepgram never finished the transcript after the "done" tap: the mic stayed attached for
+barge-in, so room noise kept the utterance open, and after 2 seconds the agent answered from
+the interim guess. Three changes:
+
+- `end_turn` detaches the mic before committing, as LiveKit's push-to-talk recipe does. The
+  session then pushes silence, Deepgram finalises at once, and the wait allows 5 seconds. The
+  mic is attached again while the agent speaks, so talking over it still interrupts. If nothing
+  was heard, the widget says so rather than wait on "Thinking…".
+- Speech-to-text runs as Indian English (`STT_LANGUAGE=en-IN`). Other languages come with M5.
+- Nova-3 key terms bias recognition toward portal words (attendance, RMS, hostel…) and the
+  student's own course titles, which the orchestrator now returns with the session.
+
+While the agent is thinking the mic button is disabled, so a late "done" tap, after the agent
+already heard the pause, can't barge in on its own answer.

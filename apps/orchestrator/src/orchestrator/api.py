@@ -53,6 +53,8 @@ class SessionOut(BaseModel):
 class SessionInfo(BaseModel):
     first_name: str
     page_id: str | None
+    # The student's courses; the voice worker gives them to speech-to-text as key terms.
+    course_titles: list[str] = []
 
 
 class TurnIn(_In):
@@ -101,7 +103,16 @@ async def create_session(body: SessionIn, request: Request) -> SessionOut:
 @router.get("/sessions/{session_id}", response_model=SessionInfo)
 async def get_session(session_id: str, request: Request) -> SessionInfo:
     session = await _session(request, session_id)
-    return SessionInfo(first_name=session.first_name, page_id=session.page_id)
+    ums: MiniUms = request.app.state.ums
+    try:
+        rows = await ums.attendance(session.api_token)
+    except (UmsUnauthorized, UmsUnavailable):
+        rows = []  # recognition just works without the hints
+    return SessionInfo(
+        first_name=session.first_name,
+        page_id=session.page_id,
+        course_titles=sorted({row["course_title"] for row in rows}),
+    )
 
 
 @router.delete("/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)

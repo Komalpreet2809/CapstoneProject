@@ -95,9 +95,9 @@ export class VoiceClient {
     });
   }
 
-  private async rpc(method: "start_turn" | "end_turn" | "cancel_turn"): Promise<void> {
+  private async rpc(method: "start_turn" | "end_turn" | "cancel_turn"): Promise<string> {
     if (!this.agent) throw new Error("Voice isn't connected");
-    await this.room.localParticipant.performRpc({
+    return this.room.localParticipant.performRpc({
       destinationIdentity: this.agent.identity,
       method,
       payload: "",
@@ -111,8 +111,9 @@ export class VoiceClient {
     await this.rpc("start_turn");
   }
 
-  async endTurn(): Promise<void> {
-    await this.rpc("end_turn");
+  /** True if the agent heard something to answer. */
+  async endTurn(): Promise<boolean> {
+    return (await this.rpc("end_turn")) !== "empty";
   }
 
   async cancelTurn(): Promise<void> {

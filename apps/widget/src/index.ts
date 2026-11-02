@@ -126,6 +126,8 @@ function mount(): VoiceServeApi {
     fab.dataset.live = String(live);
     mic.setAttribute("aria-label", live ? "Stop speaking" : next === "speaking" ? "Interrupt and speak" : "Start speaking");
     send.disabled = next === "thinking" || next === "connecting";
+    // A late "done" tap after the agent heard the pause itself must not barge in on the answer.
+    mic.disabled = next === "thinking";
   }
 
   function scroll() {
@@ -281,7 +283,11 @@ function mount(): VoiceServeApi {
       if (state === "listening") {
         userTurnActive = false;
         setState("thinking");
-        await client.endTurn();
+        if (!(await client.endTurn())) {
+          note("I didn’t catch that. Tap the mic and try again.");
+          setState("done");
+          void client.micOff();
+        }
       } else {
         userTurnActive = true; // also a barge-in when the agent is speaking
         await client.startTurn();

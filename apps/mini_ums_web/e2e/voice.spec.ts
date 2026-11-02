@@ -35,3 +35,27 @@ test("voice: a spoken question gets a spoken answer and a card; tapping the mic 
   await panel.getByRole("button", { name: "Interrupt and speak" }).click();
   await expect(panel.getByRole("status")).toHaveText(/Listening/, { timeout: 2_000 });
 });
+
+test("voice: tapping again ends the turn, and it is answered", async ({ page }) => {
+  await page.goto("/");
+  await closeDrivePopup(page);
+  const session = page.waitForResponse((r) => r.url().endsWith("/api/voice/session"));
+  await page.getByRole("button", { name: "Open VoiceServe voice assistant" }).click();
+  const body = (await (await session).json()) as { voice: { mode: string } | null };
+  // Replay speech-to-text has no live captions to wait on: it transcribes after the pause.
+  test.skip(body.voice?.mode !== "live", "needs live voice: provider keys in .env");
+
+  const panel = page.getByRole("dialog", { name: "VoiceServe assistant" });
+  await expect(panel.getByRole("status")).toHaveText(/Listening/, { timeout: 15_000 });
+  // Tap "done" while the question is still playing, before the agent could hear a pause.
+  await expect(panel.locator(".bubble.user").first()).toContainText(/attendance/i, {
+    timeout: 20_000,
+  });
+  await panel.getByRole("button", { name: "Stop speaking" }).click();
+  await expect(panel.getByRole("region", { name: "Attendance" }).first()).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(panel.locator(".bubble.agent").first()).toContainText(/percent|classes/, {
+    timeout: 15_000,
+  });
+});
