@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>VoiceServe Progress Report</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  body { font-family: "Segoe UI", system-ui, sans-serif; color: #1f2933; font-size: 10.5pt; line-height: 1.45; }
+  h1 { font-size: 21pt; margin: 0 0 2px; color: #0f4c5c; }
+  .meta { color: #52606d; margin-bottom: 14px; }
+  h2 { font-size: 13pt; color: #0f4c5c; border-bottom: 1.5px solid #c9d6df; padding-bottom: 3px; margin: 18px 0 8px; }
+  p { margin: 6px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 4px; }
+  th, td { text-align: left; vertical-align: top; padding: 5px 7px; border-bottom: 1px solid #e4e7eb; }
+  th { background: #f0f4f8; font-weight: 600; }
+  .done { color: #1e7b45; font-weight: 600; }
+  .now { color: #b7791f; font-weight: 600; }
+  .lead { background: #f0f7f4; border-left: 4px solid #1e7b45; padding: 8px 10px; }
+  ul { margin: 4px 0 4px 18px; padding: 0; }
+  li { margin: 2px 0; }
+  .q { font-style: italic; }
+  .small { color: #52606d; font-size: 9.5pt; }
+</style>
+</head>
+<body>
+
+<h1>VoiceServe: Progress Report</h1>
+<div class="meta">12 November 2026 · Update to the report of 5 November</div>
+
+<p class="lead">Since the last report, the voice assistant has grown from answering only attendance
+questions to answering <b>five kinds of student questions</b>: attendance, fees, timetable, exams and
+assignments. It now gives a specific answer to each question, not a general one.
+Milestone 4 is one third done.</p>
+
+<h2>What VoiceServe is</h2>
+<p>A voice assistant inside a university student portal. A student taps a mic button on any page
+and asks in plain speech (or types). It answers out loud and shows a card on screen. It uses our own
+practice portal, <b>Univra</b>, filled with made-up students: same layout and menus as the real
+portal, our own name, logo and colours. No real student data is used.</p>
+
+<h2>Progress at a glance</h2>
+<table>
+  <tr><th>#</th><th>Milestone</th><th>In simple words</th><th>Status</th></tr>
+  <tr><td>M1</td><td>Foundation</td><td>Whole system starts with one command</td><td class="done">Done</td></tr>
+  <tr><td>M2</td><td>Practice portal (Univra)</td><td>Working student portal with fake students</td><td class="done">Done</td></tr>
+  <tr><td>M3</td><td>First voice feature</td><td>Ask about attendance by voice or text</td><td class="done">Done</td></tr>
+  <tr><td>M4</td><td>Full assistant</td><td>All student questions, opening pages, filing requests safely</td><td class="now">In progress (part 1 of 3 done)</td></tr>
+  <tr><td>M5</td><td>Languages + rulebook</td><td>Hindi and Hinglish; answers from university rules</td><td>Not started</td></tr>
+  <tr><td>M6</td><td>Staff side</td><td>Staff dashboard; hand over to a human</td><td>Not started</td></tr>
+  <tr><td>M7</td><td>Testing + final report</td><td>Measure accuracy and speed</td><td>Not started</td></tr>
+</table>
+
+<h2>New since the last report</h2>
+<p>The assistant can now answer these, each with a spoken reply and an on-screen card
+(real examples from our demo student, Aarav):</p>
+<table>
+  <tr><th style="width:36%">Student asks</th><th>Assistant answers</th></tr>
+  <tr><td class="q">"How much fee do I owe?"</td><td>You have 23,500 rupees due in total. The next payment, Hostel Fee (2nd instalment), is due on Sunday, 22 November.</td></tr>
+  <tr><td class="q">"What's my hostel fee?"</td><td>Your Hostel Fee of 85,000 rupees is fully paid. Your Hostel Fee (2nd instalment) has 20,000 rupees pending.</td></tr>
+  <tr><td class="q">"Any classes after 2 pm on Monday?"</td><td>You have 1 class on Monday, 16 November after 2 PM: CSE 343, Software Engineering, at 4 PM.</td></tr>
+  <tr><td class="q">"What's my next class?"</td><td>Your next class is CSE 305, Database Management Systems, at 12 PM in room B3-416.</td></tr>
+  <tr><td class="q">"When is my next exam?"</td><td>The exam, its date and time, and the seat: R1-S2 in room A-101, Academic Block A.</td></tr>
+  <tr><td class="q">"Do I have any pending assignments?"</td><td>You have 4 pending assignments. The next one is Case Study 2 for Computer Networks, due Sunday.</td></tr>
+  <tr><td class="q">"In which subject do I have least attendance?"</td><td>Your lowest attendance is in Computer Networks, at 73 percent. Attend the next 3 classes in a row to reach 75.</td></tr>
+</table>
+<ul>
+  <li><b>Understands days and times</b>: "today", "tomorrow", "on Friday", "next Monday", "after 2 pm", "next class".</li>
+  <li><b>Specific answers</b>: a question about one fee, one course or the weakest subject gets an answer about exactly that, not a general summary.</li>
+  <li><b>Fixed from our own testing</b>: we asked it real questions, found two that gave generic answers, and fixed both.</li>
+</ul>
+
+<h2>How we keep it safe and correct</h2>
+<ul>
+  <li><b>No made-up numbers.</b> Every amount, date and percentage comes straight from the portal's database. The AI never invents them.</li>
+  <li><b>Fake data only</b>, and a student can only see their own data.</li>
+  <li><b>Honest when it can't</b>: if the data can't be reached, it says so instead of guessing.</li>
+  <li><b>Free to run</b>: everything so far works on free services; a $5-a-day spending cap protects any paid service.</li>
+</ul>
+
+<h2>How we checked it works</h2>
+<table>
+  <tr><th>Check</th><th>Result</th></tr>
+  <tr><td>Automatic tests (whole project)</td><td>355 passing</td></tr>
+  <tr><td>Browser tests (a robot clicks through the portal)</td><td>12 tests</td></tr>
+  <tr><td>Live questions asked to the running system</td><td>All answers correct (examples above)</td></tr>
+  <tr><td>Code saved and backed up</td><td>Pushed to GitHub</td></tr>
+</table>
+
+<h2>How to see the demo</h2>
+<p>We share a public link from our laptop (it works while the laptop is on). Log in with registration
+number <b>24100001</b> and password <b>Demo@1234</b>, tap the mic (or type), and ask any question from the
+table above.</p>
+
+<h2>Next steps</h2>
+<ul>
+  <li><b>M4 part 2: Navigate.</b> "Take me to hostel leave" opens the right page from about 180 menu items.</li>
+  <li><b>M4 part 3: Do things safely.</b> File a complaint or apply for hostel leave by voice. The assistant reads it back and saves it only after a clear "yes".</li>
+  <li><b>Then:</b> Hindi and Hinglish (M5), staff dashboard (M6), full evaluation (M7).</li>
+</ul>
+
+<h2>Questions for you</h2>
+<ul>
+  <li>Can we use a small paid budget (capped at $5 a day) for Hindi/Hinglish testing in M5?</li>
+  <li>Is a demo from our laptop fine for the final presentation, or do we need a permanent website?</li>
+  <li>May we record volunteer students' voices to test accuracy? Is a consent form needed?</li>
+</ul>
+
+<p class="small">All data shown is synthetic. No real university system or student record was used.</p>
+</body>
+</html>
