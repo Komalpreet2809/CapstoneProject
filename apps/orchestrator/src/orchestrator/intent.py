@@ -19,12 +19,23 @@ from typing import Literal, Protocol
 import anthropic
 from pydantic import BaseModel, Field
 
+from orchestrator.dates import find_after, find_day
 from voiceserve_common.budget import BudgetExceeded, BudgetGuard
 from voiceserve_common.pricing import llm_cost
 
 log = logging.getLogger(__name__)
 
-IntentName = Literal["attendance", "greeting", "help", "unsupported", "out_of_scope"]
+IntentName = Literal[
+    "attendance",
+    "fees",
+    "timetable",
+    "exams",
+    "assignments",
+    "greeting",
+    "help",
+    "unsupported",
+    "out_of_scope",
+]
 
 
 class Intent(BaseModel):
@@ -32,19 +43,35 @@ class Intent(BaseModel):
 
     intent: IntentName = Field(
         description=(
-            "attendance: their own attendance, overall or for a course. greeting: hello only. "
-            "help: what the assistant can do. unsupported: another UMS feature (fees, "
-            "timetable, exams, assignments, requests, hostel leave, policies). "
-            "out_of_scope: anything that isn't about their UMS."
+            "attendance: their own attendance, overall or for a course. fees: fee dues or fee "
+            "status. timetable: their classes on a day, after a time, or the next class. "
+            "exams: exam dates, date sheet or seating. assignments: pending assignments. "
+            "greeting: hello only. help: what the assistant can do. unsupported: another UMS "
+            "feature (requests, hostel leave, policies). out_of_scope: anything that isn't "
+            "about their UMS."
         )
     )
     course: str | None = Field(
         default=None,
         description="Course code or name the student mentioned, exactly as said; else null.",
     )
+    day: str | None = Field(
+        default=None,
+        description=(
+            "For timetable: the day as said in English, e.g. 'today', 'tomorrow', 'friday', "
+            "'next monday', or an ISO date; else null."
+        ),
+    )
+    after: str | None = Field(
+        default=None,
+        description=(
+            "For timetable: the time after which classes are wanted, as said, e.g. '2 pm', "
+            "'14:30', 'noon'; 'now' when they ask for their next class; else null."
+        ),
+    )
     feature: str | None = Field(
         default=None,
-        description="For unsupported: the UMS feature in two or three words, e.g. 'fee dues'.",
+        description="For unsupported: the UMS feature in two or three words, e.g. 'hostel leave'.",
     )
 
 
@@ -67,12 +94,16 @@ _GREETING = re.compile(
     re.IGNORECASE,
 )
 _HELP = re.compile(r"\b(help|what can you do|how do i use you)\b", re.IGNORECASE)
-# Other UMS features that arrive in M4/M5, with the name the reply uses.
+# Ask features after attendance, in the order they are tried: assignments before fees so
+# "when is my assignment due" isn't read as fee dues.
+_ASK: tuple[tuple[re.Pattern[str], IntentName], ...] = (
+    (re.compile(r"\b(assignments?|homework|quiz(zes)?|lab reports?)\b", re.I), "assignments"),
+    (re.compile(r"\b(exams?|date\s*sheet|seating|seat|admit card)\b", re.I), "exams"),
+    (re.compile(r"\b(fees?|dues|payment|outstanding|pay)\b", re.I), "fees"),
+    (re.compile(r"\b(time\s*table|schedule|class(es)?|lectures?|period)\b", re.I), "timetable"),
+)
+# Other UMS features that arrive later in M4/M5, with the name the reply uses.
 _FEATURES: tuple[tuple[re.Pattern[str], str], ...] = (
-    (re.compile(r"\b(fee|fees|dues|payment)\b", re.I), "fee dues"),
-    (re.compile(r"\b(time\s*table|schedule|next class|classes today)\b", re.I), "your timetable"),
-    (re.compile(r"\b(exam|exams|date\s*sheet|seating|seat)\b", re.I), "exams and seating"),
-    (re.compile(r"\b(assignment|assignments|homework)\b", re.I), "assignments"),
     (re.compile(r"\b(rms|complaint|ticket|request)\b", re.I), "RMS requests"),
     (re.compile(r"\b(hostel\s+leave|leave|outing)\b", re.I), "hostel leave"),
     (re.compile(r"\b(rule|rules|policy|policies)\b", re.I), "university policies"),
@@ -108,9 +139,16 @@ class RulesClassifier:
             return Intent(intent="greeting")
         if _ATTENDANCE.search(text):
             return Intent(intent="attendance", course=_course_mention(text))
-        for pattern, feature in _FEATURES:
+        for pattern, feature in _FEATURES:  # requests/leave/policies win over "classes"
             if pattern.search(text):
                 return Intent(intent="unsupported", feature=feature)
+        for pattern, name in _ASK:
+            if pattern.search(text):
+                if name == "timetable":
+                    return Intent(intent=name, day=find_day(text), after=find_after(text))
+                if name == "exams":
+                    return Intent(intent=name, course=_course_mention(text))
+                return Intent(intent=name)
         if _HELP.search(text):
             return Intent(intent="help")
         return Intent(intent="out_of_scope")

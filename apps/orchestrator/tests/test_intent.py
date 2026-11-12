@@ -28,9 +28,16 @@ from voiceserve_common.budget import BudgetExceeded, BudgetGuard
         ("meri hazri kitni hai", "attendance", None),
         ("Hello", "greeting", None),
         ("hi!", "greeting", None),
-        ("How much fee do I owe?", "unsupported", None),
-        ("When is my next class?", "unsupported", None),
+        ("How much fee do I owe?", "fees", None),
+        ("Any dues pending?", "fees", None),
+        ("When is my next class?", "timetable", None),
+        ("What classes do I have tomorrow after 2 pm?", "timetable", None),
+        ("When is my next exam?", "exams", None),
+        ("Where is my seat for CSE326?", "exams", None),
+        ("Do I have any pending assignments?", "assignments", None),
+        ("When is my assignment due?", "assignments", None),
         ("Log a complaint about the fan", "unsupported", None),
+        ("Apply for hostel leave", "unsupported", None),
         ("What can you do?", "help", None),
         ("Tell me a joke", "out_of_scope", None),
         ("Who won the cricket match", "out_of_scope", None),
@@ -44,8 +51,36 @@ async def test_rules(text: str, intent: str, course: str | None) -> None:
 
 
 async def test_rules_name_the_unsupported_feature() -> None:
-    result = await RulesClassifier().classify("How much fee do I owe?")
-    assert result.feature == "fee dues"
+    result = await RulesClassifier().classify("Apply for hostel leave on Friday")
+    assert result.feature == "hostel leave"
+
+
+@pytest.mark.parametrize(
+    ("text", "day", "after"),
+    [
+        ("What classes do I have tomorrow after 2 pm?", "tomorrow", "2 pm"),
+        ("timetable for friday", "friday", None),
+        ("What's my next class?", None, "now"),
+        ("show my timetable", None, None),
+    ],
+)
+async def test_rules_extract_day_and_time(text: str, day: str | None, after: str | None) -> None:
+    result = await RulesClassifier().classify(text)
+    assert (result.intent, result.day, result.after) == ("timetable", day, after)
+
+
+async def test_rules_extract_exam_course() -> None:
+    result = await RulesClassifier().classify("When is my exam for CSE 326?")
+    assert (result.intent, result.course) == ("exams", "CSE 326")
+
+
+async def test_every_replay_recording_agrees_with_the_rules() -> None:
+    """The free rules handle every recorded demo question the same way the recording does."""
+    replay = ReplayClassifier.from_package()
+    rules = RulesClassifier()
+    for text, recorded in replay._recordings.items():
+        got = await rules.classify(text)
+        assert got.intent == recorded.intent, text
 
 
 async def test_replay_matches_ignoring_case_and_punctuation() -> None:

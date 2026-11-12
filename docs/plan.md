@@ -300,3 +300,52 @@ Done in replay mode; live providers wait for keys.
   mouse; session-expired redirects pointed at the server's bind address (`0.0.0.0`).
 - **Not verified:** Deepgram speech and Claude intent with real keys (none configured).
   Add `DEEPGRAM_API_KEY` and `ANTHROPIC_API_KEY` to `.env`, then `make up` and try the mic.
+
+---
+
+## M4 — Full assistant
+
+**Goal:** the assistant covers every MVP feature in the brief (§5): Ask, Navigate, Do and Track,
+with confirm-before-write and the duplicate check enforced in code.
+
+**Done when (brief):** all scripted scenarios pass.
+
+Built in three parts, each one shippable and demoable on its own. All of it runs on the free
+setup (rules classifier, replay mode in tests); Claude is optional and only improves phrasing
+coverage.
+
+### Part 1 — more Ask features
+
+Fees, timetable (today, a given day, after a given time, mandatory flag), exams with seating,
+pending assignments.
+
+1. **Intents:** `fees`, `timetable`, `exams`, `assignments` with entities `day` and `after`,
+   as said. Both classifiers (rules and Claude) return them; replay recordings added.
+2. **Deterministic date and time parsing** (`dates.py`): "today", "tomorrow", "day after
+   tomorrow", weekday names ("on Friday", "next Monday"), ISO dates; "after 2", "after 2 pm",
+   "after 14:00". Relative to the campus date in Asia/Kolkata. Table-driven tests (mandatory
+   normaliser tests, brief §14).
+3. **Adapter:** fees, timetable, exams and assignments calls to the Mini UMS API, made as the
+   student.
+4. **Replies templated from tool output** (D-029): every amount, date, time and count comes
+   from the API; no LLM writes a reply. A generic `list` card in the widget shows the rows.
+5. **Graph:** one node per feature; the same handling of expired sessions and API errors as
+   attendance (rule 5: say so, never guess).
+
+### Part 2 — Navigate
+
+Open any menu entry by voice ("open fee dashboard", "take me to hostel leave"), matched
+deterministically against the menu catalogue's labels and keywords; the widget navigates.
+Real pages for timetable, fees, exams and hostel leave replace their placeholders.
+
+### Part 3 — Do and Track, safely
+
+Log an RMS request and apply for hostel leave through slot-filling, a spoken + on-screen
+read-back and an explicit yes (anything else is "not confirmed"), an idempotency key per
+confirmed action, and the duplicate-ticket check offering a note instead. Track: "status of my
+latest request", by number (digit by digit), hostel leave status. The confirmation parser
+gets table-driven tests.
+
+### Not in M4
+
+Hindi, Punjabi and Hinglish (M5); rulebook answers (M5); frustration and hand-off (M6).

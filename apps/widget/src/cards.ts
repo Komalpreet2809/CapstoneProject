@@ -20,7 +20,21 @@ export type Card =
       highlight: string | null;
       link?: { href: string; label: string };
     }
+  | {
+      kind: "list";
+      title: string;
+      summary: string;
+      items: ListItem[];
+      link?: { href: string; label: string };
+    }
   | { kind: "message"; title: string; body: string; link?: { href: string; label: string } };
+
+export type ListItem = {
+  label: string;
+  value: string;
+  note: string;
+  status: "ok" | "warn" | "low" | "none";
+};
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -56,6 +70,21 @@ export function renderCard(card: Card): HTMLElement {
       list.append(item);
     }
     box.append(list);
+  } else if (card.kind === "list") {
+    box.append(el("p", undefined, card.summary));
+    if (card.items.length > 0) {
+      const list = el("ul", "items");
+      for (const item of card.items) {
+        const li = el("li");
+        li.append(
+          el("span", "code", item.label),
+          el("span", "pct " + item.status, item.value),
+          el("span", "hint", item.note),
+        );
+        list.append(li);
+      }
+      box.append(list);
+    }
   } else {
     box.append(el("p", undefined, card.body));
   }

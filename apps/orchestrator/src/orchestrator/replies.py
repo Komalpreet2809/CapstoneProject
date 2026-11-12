@@ -7,9 +7,11 @@ first one while the rest are still being sent.
 """
 
 from dataclasses import dataclass, field
+from datetime import date, time
 from typing import Any
 
 from orchestrator.courses import CourseMatch, spoken_code
+from orchestrator.dates import spoken_day, spoken_time
 
 ATTENDANCE_LINK = {"href": "/attendance", "label": "Open attendance"}
 
@@ -167,29 +169,33 @@ def _message(title: str, body: str, link: dict[str, str] | None = None) -> dict[
 def greeting(first_name: str) -> Reply:
     s = [
         f"Hi {first_name}!",
-        "Ask me about your attendance, for example: am I short in any course?",
+        "Ask me about your attendance, fees, timetable, exams or assignments.",
     ]
     return Reply(s, _message("VoiceServe", " ".join(s)))
 
 
 def help_reply() -> Reply:
     s = [
-        "Right now I can tell you your attendance, overall or for one course.",
-        "Timetable, fees, exams, assignments and requests are coming soon.",
+        "I can tell you your attendance, fee dues, timetable, exams and seating, "
+        "and pending assignments.",
+        "Requests and hostel leave are coming soon.",
     ]
     return Reply(s, _message("What I can do", " ".join(s)))
 
 
 def unsupported(feature: str | None) -> Reply:
     what = feature or "that"
-    s = [f"I can't check {what} by voice yet.", "For now I can tell you your attendance."]
+    s = [
+        f"I can't help with {what} by voice yet.",
+        "I can tell you your attendance, fees, timetable, exams or assignments.",
+    ]
     return Reply(s, _message("Not available yet", " ".join(s)))
 
 
 def out_of_scope() -> Reply:
     s = [
         "Sorry, I can only help with your student portal.",
-        "Try asking about your attendance.",
+        "Try asking about your attendance, fees or timetable.",
     ]
     return Reply(s, _message("Outside what I can do", " ".join(s)))
 
@@ -199,7 +205,185 @@ def session_ended() -> Reply:
     return Reply(s, _message("Session ended", " ".join(s), {"href": "/login", "label": "Log in"}))
 
 
-def data_unavailable() -> Reply:
+def data_unavailable(what: str = "attendance records", link: dict[str, str] | None = None) -> Reply:
     # Rule 5: say so, never guess.
-    s = ["I couldn't reach your attendance records just now.", "Please try again in a moment."]
-    return Reply(s, _message("Couldn't load attendance", " ".join(s), ATTENDANCE_LINK))
+    s = [f"I couldn't reach your {what} just now.", "Please try again in a moment."]
+    return Reply(s, _message(f"Couldn't load {what}", " ".join(s), link or ATTENDANCE_LINK))
+
+
+# --- fees, timetable, exams, assignments ------------------------------------------------------
+# Every amount, date, time and count is read from the API response; code only counts rows and
+# formats them (rule 4).
+
+FEES_LINK = {"href": "/m/fee-dashboard", "label": "Open fee dashboard"}
+TIMETABLE_LINK = {"href": "/m/time-table", "label": "Open time table"}
+EXAMS_LINK = {"href": "/m/exam-date-sheet", "label": "Open date sheet"}
+ASSIGNMENTS_LINK = {"href": "/m/pending-assignments", "label": "Open assignments"}
+SPOKEN_LIMIT = 4  # beyond this, rows go on the card only
+
+
+def unclear_day() -> Reply:
+    s = [
+        "Sorry, I didn't catch which day or time you meant.",
+        "Try today, tomorrow, a weekday, or a time like after 2 PM.",
+    ]
+    return Reply(s, _message("Which day?", " ".join(s), TIMETABLE_LINK))
+
+
+def rupees(amount: float) -> str:
+    """Indian digit grouping: 120000 -> '1,20,000'; paise only when present."""
+    whole, paise = divmod(round(amount * 100), 100)
+    digits = str(whole)
+    head, tail = digits[:-3], digits[-3:]
+    groups: list[str] = []
+    while len(head) > 2:
+        groups.insert(0, head[-2:])
+        head = head[:-2]
+    text = ",".join([g for g in (head, *groups) if g] + [tail])
+    return f"{text}.{paise:02d}" if paise else text
+
+
+def _plural(n: int, word: str, many: str | None = None) -> str:
+    return f"{n} {word}" if n == 1 else f"{n} {many or word + 's'}"
+
+
+def _short_date(value: date) -> str:
+    return f"{value.day} {value:%b}"
+
+
+def _list(
+    title: str, summary: str, items: list[dict[str, Any]], link: dict[str, str]
+) -> dict[str, Any]:
+    return {"kind": "list", "title": title, "summary": summary, "items": items, "link": link}
+
+
+def _item(label: str, value: str, note: str = "", status: str = "none") -> dict[str, Any]:
+    return {"label": label, "value": value, "note": note, "status": status}
+
+
+def fees(data: dict[str, Any], today: date) -> Reply:
+    due = sorted((i for i in data["items"] if i["due"] > 0), key=lambda i: i["due_date"])
+    if not due:
+        s = ["You have no fees due right now.", "Your fee status is NIL."]
+        return Reply(s, _list("Fees", s[0], [], FEES_LINK))
+    s = [f"You have {rupees(data['total_due'])} rupees due in total."]
+    if data["overdue_due"] > 0:
+        s.append(f"{rupees(data['overdue_due'])} rupees of that is overdue.")
+    upcoming = [i for i in due if not i["overdue"]]
+    if upcoming:
+        when = spoken_day(date.fromisoformat(upcoming[0]["due_date"]), today)
+        s.append(f"The next payment, {upcoming[0]['head']}, is due {when}.")
+    items = []
+    for i in due:
+        on = _short_date(date.fromisoformat(i["due_date"]))
+        note = f"Overdue since {on}" if i["overdue"] else f"Due {on}"
+        status = "low" if i["overdue"] else "warn"
+        items.append(_item(i["head"], f"₹{rupees(i['due'])}", note, status))
+    return Reply(s, _list("Fees", s[0], items, FEES_LINK))
+
+
+def _class_words(e: dict[str, Any]) -> str:
+    start = spoken_time(time.fromisoformat(e["start"]))
+    mandatory = ", mandatory" if e["mandatory"] else ""
+    name = f"{spoken_code(e['course_code'])}, {e['course_title']}"
+    return f"{name}, at {start} in room {e['room']}{mandatory}"
+
+
+def timetable(data: dict[str, Any], today: date, after: time | None, next_only: bool) -> Reply:
+    day = date.fromisoformat(data["date"])
+    when = spoken_day(day, today)
+    entries = data["entries"][:1] if next_only else data["entries"]
+    after_words = f" after {spoken_time(after)}" if after and not next_only else ""
+    if next_only:
+        s = (
+            [f"Your next class is {_class_words(entries[0])}."]
+            if entries
+            else [f"You have no more classes {when}."]
+        )
+    elif not entries:
+        s = [f"You have no classes {when}{after_words}."]
+    else:
+        s = [f"You have {_plural(len(entries), 'class', 'classes')} {when}{after_words}."]
+        s += [f"{_class_words(e)}." for e in entries[:SPOKEN_LIMIT]]
+        if len(entries) > SPOKEN_LIMIT:
+            s.append(f"And {len(entries) - SPOKEN_LIMIT} more on screen.")
+    items = [
+        _item(
+            f"{e['start'][:5]}-{e['end'][:5]}",
+            e["course_code"],
+            " · ".join(
+                [e["course_title"], e["room"], e["kind"]]
+                + (["Mandatory"] if e["mandatory"] else [])
+            ),
+            "warn" if e["mandatory"] else "none",
+        )
+        for e in entries
+    ]
+    title = f"Time table · {data['weekday']} {_short_date(day)}"
+    return Reply(s, _list(title, s[0], items, TIMETABLE_LINK))
+
+
+def exams(rows: list[dict[str, Any]], today: date) -> Reply:
+    upcoming = sorted(
+        (r for r in rows if date.fromisoformat(r["date"]) >= today),
+        key=lambda r: (r["date"], r["start"]),
+    )
+    if not upcoming:
+        s = ["You have no upcoming exams."]
+        return Reply(s, _list("Upcoming exams", s[0], [], EXAMS_LINK))
+    first = upcoming[0]
+    when = spoken_day(date.fromisoformat(first["date"]), today)
+    start = spoken_time(time.fromisoformat(first["start"]))
+    s = [
+        f"Your next exam is {spoken_code(first['course_code'])}, {first['course_title']}, "
+        f"{first['exam_type']}, {when} at {start}."
+    ]
+    seat = first["seating"]
+    if seat:
+        s.append(f"Your seat is {seat['seat']} in room {seat['room']}, {seat['building']}.")
+    else:
+        s.append("Your seat hasn't been allotted yet.")
+    if len(upcoming) > 1:
+        s.append(f"You have {_plural(len(upcoming) - 1, 'more exam')} after that, on screen.")
+    items = []
+    for r in upcoming:
+        seat_note = (
+            [f"Seat {r['seating']['seat']}, room {r['seating']['room']}"] if r["seating"] else []
+        )
+        items.append(
+            _item(
+                f"{_short_date(date.fromisoformat(r['date']))} {r['start'][:5]}",
+                r["course_code"],
+                " · ".join([r["course_title"], r["exam_type"], *seat_note]),
+            )
+        )
+    return Reply(s, _list("Upcoming exams", s[0], items, EXAMS_LINK))
+
+
+def assignments(rows: list[dict[str, Any]], today: date) -> Reply:
+    pending = sorted(rows, key=lambda r: (r["last_date"], r["id"]))
+    if not pending:
+        s = ["You have no pending assignments."]
+        return Reply(s, _list("Pending assignments", s[0], [], ASSIGNMENTS_LINK))
+    first = pending[0]
+    when = spoken_day(date.fromisoformat(first["last_date"]), today)
+    s = [
+        f"You have {_plural(len(pending), 'pending assignment')}.",
+        f"The next one is {first['title']} for {spoken_code(first['course_code'])}, "
+        f"{first['course_title']}, due {when}.",
+    ]
+    items = []
+    for r in pending:
+        left = r["days_left"]
+        status = "low" if left <= 1 else "warn" if left <= 3 else "ok"
+        left_words = "due today" if left == 0 else f"{_plural(left, 'day')} left"
+        due_on = _short_date(date.fromisoformat(r["last_date"]))
+        items.append(
+            _item(
+                r["course_code"],
+                r["title"],
+                f"{r['course_title']} · Due {due_on} · {left_words}",
+                status,
+            )
+        )
+    return Reply(s, _list("Pending assignments", s[0], items, ASSIGNMENTS_LINK))
