@@ -180,3 +180,20 @@ async def test_rules_extract_fee_head(text: str, head: str | None) -> None:
 async def test_rules_extract_assignment_course() -> None:
     result = await RulesClassifier().classify("any assignments for CSE326?")
     assert (result.intent, result.course) == ("assignments", "CSE326")
+
+
+@pytest.mark.parametrize(
+    ("text", "rank", "course"),
+    [
+        ("in which subject do I have least attendance", "lowest", None),
+        ("which course has my lowest attendance?", "lowest", None),
+        ("where is my attendance worst", "lowest", None),
+        ("which subject has the highest attendance", "highest", None),
+        ("in which course do I have most attendance", "highest", None),
+        ("how many classes can I miss at most in CSE316", None, "CSE316"),
+        ("what's my attendance in which subject", None, None),
+    ],
+)
+async def test_rules_attendance_rank(text: str, rank: str | None, course: str | None) -> None:
+    result = await RulesClassifier().classify(text)
+    assert (result.intent, result.rank, result.course) == ("attendance", rank, course)

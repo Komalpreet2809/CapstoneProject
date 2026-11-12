@@ -38,6 +38,7 @@ IntentName = Literal[
 ]
 
 
+Rank = Literal["lowest", "highest"]
 FeeHead = Literal["tuition", "hostel", "examination", "activity", "library", "transport"]
 _FEE_HEAD = re.compile(
     r"\b(tuition|hostel|mess|exam(?:ination)?|activity|library|transport|bus)\b", re.I
@@ -84,6 +85,13 @@ class Intent(BaseModel):
         description=(
             "For timetable: the time after which classes are wanted, as said, e.g. '2 pm', "
             "'14:30', 'noon'; 'now' when they ask for their next class; else null."
+        ),
+    )
+    rank: Rank | None = Field(
+        default=None,
+        description=(
+            "For attendance: 'lowest' when they ask which course has the least/lowest/worst "
+            "attendance, 'highest' for the most/best; else null."
         ),
     )
     fee_head: FeeHead | None = Field(
@@ -141,15 +149,38 @@ _NOT_A_COURSE = {
 }  # fmt: skip
 
 
+# A phrase starting with a question word is part of the question, never a course name:
+# "in which subject do I have least attendance".
+_QUESTION_WORD = re.compile(r"^(which|what|how|where|when|who|whom|whose|do|does|is|are)\b", re.I)
+_RANK = re.compile(
+    r"\b(?:(least|lowest|minimum|min|worst|poorest|weakest)|"
+    r"(highest|(?<!at\s)most|maximum|max|best|top))\b",
+    re.IGNORECASE,
+)
+
+
 def _course_mention(text: str) -> str | None:
     if code := _CODE.search(text):
         return code.group(0)
     if phrase := _COURSE_PHRASE.search(text.strip()):
         mention = phrase.group(1).strip()
         mention = re.sub(r"^(my|the)\s+", "", mention, flags=re.I)
-        if mention.lower() not in _NOT_A_COURSE and not mention.lower().startswith("my "):
+        lowered = mention.lower()
+        if (
+            lowered not in _NOT_A_COURSE
+            and not lowered.startswith("my ")
+            and not _QUESTION_WORD.match(mention)
+        ):
             return mention
     return None
+
+
+def attendance_rank(text: str) -> Rank | None:
+    """'least attendance' -> 'lowest'; 'best attendance' -> 'highest'."""
+    match = _RANK.search(text)
+    if not match:
+        return None
+    return "lowest" if match.group(1) else "highest"
 
 
 class RulesClassifier:
@@ -159,6 +190,9 @@ class RulesClassifier:
         if _GREETING.search(text):
             return Intent(intent="greeting")
         if _ATTENDANCE.search(text):
+            rank = attendance_rank(text)
+            if rank is not None and not _CODE.search(text):
+                return Intent(intent="attendance", rank=rank)
             return Intent(intent="attendance", course=_course_mention(text))
         for pattern, feature in _FEATURES:  # requests/leave/policies win over "classes"
             if pattern.search(text):

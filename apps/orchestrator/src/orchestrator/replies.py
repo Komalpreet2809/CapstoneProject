@@ -142,6 +142,24 @@ def overall_attendance(rows: list[dict[str, Any]]) -> Reply:
     )
 
 
+def ranked_attendance(rows: list[dict[str, Any]], rank: str) -> Reply:
+    """Which course has the lowest (or highest) attendance; ties are named together."""
+    held = [r for r in rows if r["percent"] is not None]
+    if not held:
+        return overall_attendance(rows)
+    pick = min if rank == "lowest" else max
+    target = pick(round(r["percent"]) for r in held)
+    top = sorted((r for r in held if round(r["percent"]) == target), key=lambda r: r["course_code"])
+    which = "lowest" if rank == "lowest" else "highest"
+    names = " and ".join(_name(r) for r in top)
+    sentences = [f"Your {which} attendance is in {names}, at {target} percent."]
+    if len(top) == 1:
+        r = top[0]
+        sentences.append(f"You've attended {r['attended']} of {r['held']} classes.")
+        sentences += course_attendance(r).sentences[2:]  # what to do next
+    return Reply(sentences, _card(rows, sentences[0], highlight=top[0]["course_code"]))
+
+
 def course_not_found(mention: str, rows: list[dict[str, Any]]) -> Reply:
     sentence = f'I couldn\'t find a course matching "{mention}" in your registered courses.'
     return Reply(

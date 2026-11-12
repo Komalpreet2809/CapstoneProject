@@ -134,7 +134,9 @@ def build_graph(classifier: Classifier, ums: MiniUms) -> Any:
             log.warning("attendance lookup failed")
             return {"reply": replies.data_unavailable()}
 
-        mention = state["intent"].course
+        mention, rank = state["intent"].course, state["intent"].rank
+        if rank and not mention:
+            return {"reply": replies.ranked_attendance(rows, rank)}
         if not mention:
             return {"reply": replies.overall_attendance(rows)}
         match = match_course(mention, rows)

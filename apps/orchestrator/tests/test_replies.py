@@ -83,3 +83,32 @@ def test_missing_data_is_never_guessed() -> None:
     reply = replies.data_unavailable()
     assert "couldn't reach" in reply.text
     assert not _numbers(reply.text)
+
+
+def test_lowest_attendance_names_the_course(rows: list[dict[str, Any]]) -> None:
+    reply = replies.ranked_attendance(rows, "lowest")
+    assert (
+        reply.sentences[0]
+        == "Your lowest attendance is in CSE 326, Computer Networks, at 73 percent."
+    )
+    assert "Attend the next" in reply.text
+    assert reply.card["highlight"] == "CSE326"
+
+
+def test_highest_attendance_ignores_courses_without_classes(rows: list[dict[str, Any]]) -> None:
+    reply = replies.ranked_attendance(rows, "highest")
+    assert "CSE 331, Design and Analysis of Algorithms, at 92 percent" in reply.sentences[0]
+
+
+def test_tied_courses_are_named_together() -> None:
+    def row(code: str, title: str, attended: int, held: int) -> dict[str, Any]:
+        return {"course_code": code, "course_title": title, "held": held, "attended": attended,
+                "percent": attended / held * 100, "threshold": 75.0, "meets_threshold": True,
+                "classes_needed": 0, "can_miss": 0}  # fmt: skip
+
+    tied = [row("CSE305", "Databases", 8, 10), row("CSE316", "Operating Systems", 16, 20)]
+    reply = replies.ranked_attendance(tied, "lowest")
+    assert reply.sentences == [
+        "Your lowest attendance is in CSE 305, Databases and "
+        "CSE 316, Operating Systems, at 80 percent."
+    ]
