@@ -38,6 +38,23 @@ IntentName = Literal[
 ]
 
 
+FeeHead = Literal["tuition", "hostel", "examination", "activity", "library", "transport"]
+_FEE_HEAD = re.compile(
+    r"\b(tuition|hostel|mess|exam(?:ination)?|activity|library|transport|bus)\b", re.I
+)
+_FEE_HEAD_ALIASES: dict[str, FeeHead] = {
+    "tuition": "tuition", "hostel": "hostel", "mess": "hostel", "exam": "examination",
+    "examination": "examination", "activity": "activity", "library": "library",
+    "transport": "transport", "bus": "transport",
+}  # fmt: skip
+
+
+def fee_head(text: str) -> FeeHead | None:
+    """'what's my hostel fee' -> 'hostel'; 'how much fee is pending' -> None."""
+    match = _FEE_HEAD.search(text)
+    return _FEE_HEAD_ALIASES[match.group(1).lower()] if match else None
+
+
 class Intent(BaseModel):
     """What the student wants from this turn."""
 
@@ -69,6 +86,10 @@ class Intent(BaseModel):
             "'14:30', 'noon'; 'now' when they ask for their next class; else null."
         ),
     )
+    fee_head: FeeHead | None = Field(
+        default=None,
+        description="For fees: the one fee they asked about, if any; null for all their fees.",
+    )
     feature: str | None = Field(
         default=None,
         description="For unsupported: the UMS feature in two or three words, e.g. 'hostel leave'.",
@@ -98,8 +119,8 @@ _HELP = re.compile(r"\b(help|what can you do|how do i use you)\b", re.IGNORECASE
 # "when is my assignment due" isn't read as fee dues.
 _ASK: tuple[tuple[re.Pattern[str], IntentName], ...] = (
     (re.compile(r"\b(assignments?|homework|quiz(zes)?|lab reports?)\b", re.I), "assignments"),
+    (re.compile(r"\b(fees?|dues|payment|outstanding|pay)\b", re.I), "fees"),  # "exam fee"
     (re.compile(r"\b(exams?|date\s*sheet|seating|seat|admit card)\b", re.I), "exams"),
-    (re.compile(r"\b(fees?|dues|payment|outstanding|pay)\b", re.I), "fees"),
     (re.compile(r"\b(time\s*table|schedule|class(es)?|lectures?|period)\b", re.I), "timetable"),
 )
 # Other UMS features that arrive later in M4/M5, with the name the reply uses.
@@ -146,8 +167,10 @@ class RulesClassifier:
             if pattern.search(text):
                 if name == "timetable":
                     return Intent(intent=name, day=find_day(text), after=find_after(text))
-                if name == "exams":
+                if name in ("exams", "assignments"):
                     return Intent(intent=name, course=_course_mention(text))
+                if name == "fees":
+                    return Intent(intent=name, fee_head=fee_head(text))
                 return Intent(intent=name)
         if _HELP.search(text):
             return Intent(intent="help")

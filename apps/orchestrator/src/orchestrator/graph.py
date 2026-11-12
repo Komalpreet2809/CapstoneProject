@@ -63,7 +63,8 @@ def build_graph(classifier: Classifier, ums: MiniUms) -> Any:
         data, failed = await lookup(
             state, "fee records", replies.FEES_LINK, lambda: ums.fees(state["api_token"])
         )
-        return {"reply": failed or replies.fees(data, campus_now().date())}
+        head = state["intent"].fee_head
+        return {"reply": failed or replies.fees(data, campus_now().date(), head)}
 
     async def timetable(state: TurnState) -> dict[str, Any]:
         intent, now = state["intent"], campus_now()
@@ -109,7 +110,20 @@ def build_graph(classifier: Classifier, ums: MiniUms) -> Any:
             replies.ASSIGNMENTS_LINK,
             lambda: ums.assignments(state["api_token"]),
         )
-        return {"reply": failed or replies.assignments(rows, campus_now().date())}
+        if failed:
+            return {"reply": failed}
+        today, mention = campus_now().date(), state["intent"].course
+        if mention:
+            match = match_course(mention, list({r["course_code"]: r for r in rows}.values()))
+            if match.course is None:
+                # No pending work in a course that was named: say so, then list the rest.
+                reply = replies.assignments(rows, today)
+                reply.sentences.insert(0, f'You have no pending assignments for "{mention}".')
+                return {"reply": reply}
+            code = match.course["course_code"]
+            reply = replies.assignments([r for r in rows if r["course_code"] == code], today)
+            return {"reply": reply}
+        return {"reply": replies.assignments(rows, today)}
 
     async def attendance(state: TurnState) -> dict[str, Any]:
         try:

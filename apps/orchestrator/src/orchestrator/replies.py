@@ -261,7 +261,43 @@ def _item(label: str, value: str, note: str = "", status: str = "none") -> dict[
     return {"label": label, "value": value, "note": note, "status": status}
 
 
-def fees(data: dict[str, Any], today: date) -> Reply:
+def _fee_item(i: dict[str, Any]) -> dict[str, Any]:
+    on = _short_date(date.fromisoformat(i["due_date"]))
+    if i["due"] <= 0:
+        return _item(i["head"], "Paid", f"₹{rupees(i['amount'])} paid in full", "ok")
+    note = f"Overdue since {on}" if i["overdue"] else f"Due {on}"
+    return _item(i["head"], f"₹{rupees(i['due'])}", note, "low" if i["overdue"] else "warn")
+
+
+def fee_for_head(data: dict[str, Any], head: str, today: date) -> Reply:
+    """One kind of fee ('hostel', 'examination', ...), across its instalments."""
+    items = sorted(
+        (i for i in data["items"] if head in i["head"].lower()), key=lambda i: i["due_date"]
+    )
+    label = f"{head.capitalize()} fee"
+    if not items:
+        s = [f"I couldn't find a {head} fee on your account.", "Here are all your fees."]
+        reply = fees(data, today)
+        return Reply(s + reply.sentences, reply.card)
+    s = []
+    for i in items:
+        if i["due"] <= 0:
+            s.append(f"Your {i['head']} of {rupees(i['amount'])} rupees is fully paid.")
+            continue
+        when = spoken_day(date.fromisoformat(i["due_date"]), today)
+        if i["overdue"]:
+            s.append(
+                f"Your {i['head']} has {rupees(i['due'])} rupees pending, overdue since {when}."
+            )
+        else:
+            s.append(f"Your {i['head']} has {rupees(i['due'])} rupees pending, due {when}.")
+    summary = s[0]
+    return Reply(s, _list(label, summary, [_fee_item(i) for i in items], FEES_LINK))
+
+
+def fees(data: dict[str, Any], today: date, head: str | None = None) -> Reply:
+    if head:
+        return fee_for_head(data, head, today)
     due = sorted((i for i in data["items"] if i["due"] > 0), key=lambda i: i["due_date"])
     if not due:
         s = ["You have no fees due right now.", "Your fee status is NIL."]
@@ -273,13 +309,7 @@ def fees(data: dict[str, Any], today: date) -> Reply:
     if upcoming:
         when = spoken_day(date.fromisoformat(upcoming[0]["due_date"]), today)
         s.append(f"The next payment, {upcoming[0]['head']}, is due {when}.")
-    items = []
-    for i in due:
-        on = _short_date(date.fromisoformat(i["due_date"]))
-        note = f"Overdue since {on}" if i["overdue"] else f"Due {on}"
-        status = "low" if i["overdue"] else "warn"
-        items.append(_item(i["head"], f"₹{rupees(i['due'])}", note, status))
-    return Reply(s, _list("Fees", s[0], items, FEES_LINK))
+    return Reply(s, _list("Fees", s[0], [_fee_item(i) for i in due], FEES_LINK))
 
 
 def _class_words(e: dict[str, Any]) -> str:

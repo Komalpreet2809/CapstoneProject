@@ -148,3 +148,32 @@ def test_spoken_numbers_all_come_from_the_rows() -> None:
     reply = replies.fees(data, TODAY)
     allowed = {"20,000", "15"}
     assert numbers(reply.text) <= allowed
+
+
+def aarav_fees() -> dict[str, Any]:
+    paid = fee("Hostel Fee", 0, "2026-09-20", False) | {"amount": 85000}
+    return {
+        "items": [
+            paid,
+            fee("Hostel Fee (2nd instalment)", 20000, "2026-11-22", False),
+            fee("Examination Fee", 3500, "2026-12-02", False),
+        ],
+        "total_due": 23500,
+        "overdue_due": 0,
+    }
+
+
+def test_fee_for_one_head_answers_only_that_head() -> None:
+    reply = replies.fees(aarav_fees(), TODAY, "hostel")
+    assert reply.sentences == [
+        "Your Hostel Fee of 85,000 rupees is fully paid.",
+        "Your Hostel Fee (2nd instalment) has 20,000 rupees pending, due on Sunday, 22 November.",
+    ]
+    assert "23,500" not in reply.text  # not the overall total
+    assert [i["value"] for i in reply.card["items"]] == ["Paid", "₹20,000"]
+
+
+def test_fee_head_not_on_account_falls_back_to_all_fees() -> None:
+    reply = replies.fees(aarav_fees(), TODAY, "transport")
+    assert reply.sentences[0] == "I couldn't find a transport fee on your account."
+    assert "23,500 rupees due in total" in reply.text

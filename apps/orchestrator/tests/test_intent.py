@@ -160,3 +160,23 @@ async def test_fallback_uses_rules_when_the_llm_fails() -> None:
 
     result = await FallbackClassifier(Failing(), RulesClassifier()).classify("attendance")
     assert result.intent == "attendance"
+
+
+@pytest.mark.parametrize(
+    ("text", "head"),
+    [
+        ("whats my hostel fee", "hostel"),
+        ("how much fees is still pending", None),
+        ("what's my exam fee", "examination"),
+        ("is my tuition fee paid?", "tuition"),
+        ("bus fee due", "transport"),
+    ],
+)
+async def test_rules_extract_fee_head(text: str, head: str | None) -> None:
+    result = await RulesClassifier().classify(text)
+    assert (result.intent, result.fee_head) == ("fees", head)
+
+
+async def test_rules_extract_assignment_course() -> None:
+    result = await RulesClassifier().classify("any assignments for CSE326?")
+    assert (result.intent, result.course) == ("assignments", "CSE326")
