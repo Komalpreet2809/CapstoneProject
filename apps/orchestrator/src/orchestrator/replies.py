@@ -12,6 +12,7 @@ from typing import Any
 
 from orchestrator.courses import CourseMatch, spoken_code
 from orchestrator.dates import spoken_day, spoken_time
+from orchestrator.navigation import MenuEntry, NavMatch
 
 ATTENDANCE_LINK = {"href": "/attendance", "label": "Open attendance"}
 
@@ -238,6 +239,32 @@ TIMETABLE_LINK = {"href": "/m/time-table", "label": "Open time table"}
 EXAMS_LINK = {"href": "/m/exam-date-sheet", "label": "Open date sheet"}
 ASSIGNMENTS_LINK = {"href": "/m/pending-assignments", "label": "Open assignments"}
 SPOKEN_LIMIT = 4  # beyond this, rows go on the card only
+
+
+def navigate(entry: MenuEntry) -> Reply:
+    s = [f"Opening {entry.label}."]
+    card = {"kind": "navigate", "title": entry.label, "body": entry.path, "href": entry.href}
+    return Reply(s, card)
+
+
+def already_here(entry: MenuEntry) -> Reply:
+    s = [f"You're already on {entry.label}."]
+    return Reply(s, _message(entry.label, s[0]))
+
+
+def page_ambiguous(match: NavMatch) -> Reply:
+    options = " or ".join(e.label for e in match.candidates)
+    s = [f"Did you mean {options}?"]
+    body = "Say the page name, for example: open " + match.candidates[0].label + "."
+    return Reply(s, _message("Which page?", body))
+
+
+def page_not_found(said: str) -> Reply:
+    s = [
+        f'I couldn\'t find a page called "{said}".',
+        "Try the search at the top of the portal, or say the page name from the menu.",
+    ]
+    return Reply(s, _message("Page not found", " ".join(s)))
 
 
 def unclear_day() -> Reply:

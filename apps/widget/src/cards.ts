@@ -27,7 +27,11 @@ export type Card =
       items: ListItem[];
       link?: { href: string; label: string };
     }
-  | { kind: "message"; title: string; body: string; link?: { href: string; label: string } };
+  | { kind: "message"; title: string; body: string; link?: { href: string; label: string } }
+  | { kind: "navigate"; title: string; body: string; href: string };
+
+/** How long the spoken "Opening …" gets before the page changes. */
+export const NAVIGATE_DELAY_MS = 1200;
 
 export type ListItem = {
   label: string;
@@ -85,12 +89,23 @@ export function renderCard(card: Card): HTMLElement {
       }
       box.append(list);
     }
+  } else if (card.kind === "navigate") {
+    box.append(el("p", undefined, card.body));
+    const href = safeHref(card.href);
+    if (href) {
+      const a = el("a", undefined, `Opening ${card.title}…`);
+      a.href = href;
+      box.append(a);
+      // Only same-origin paths are ever followed (safeHref); the card stays as a fallback link.
+      window.setTimeout(() => window.location.assign(href), NAVIGATE_DELAY_MS);
+    }
   } else {
     box.append(el("p", undefined, card.body));
   }
-  const href = card.link ? safeHref(card.link.href) : null;
-  if (card.link && href) {
-    const a = el("a", undefined, card.link.label);
+  const link = "link" in card ? card.link : undefined;
+  const href = link ? safeHref(link.href) : null;
+  if (link && href) {
+    const a = el("a", undefined, link.label);
     a.href = href;
     box.append(a);
   }

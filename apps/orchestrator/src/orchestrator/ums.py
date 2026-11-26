@@ -43,6 +43,16 @@ class MiniUms:
         result: list[dict[str, Any]] = await self._get("/me/attendance", token)
         return result
 
+    async def menu(self) -> dict[str, Any]:
+        """The portal's menu catalogue (public: no student data in it)."""
+        try:
+            response = await self._client.get("/catalogue/menu")
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise UmsUnavailable(type(exc).__name__) from exc
+        result: dict[str, Any] = response.json()
+        return result
+
     async def fees(self, token: str) -> dict[str, Any]:
         result: dict[str, Any] = await self._get("/me/fees", token)
         return result

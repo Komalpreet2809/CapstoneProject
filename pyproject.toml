@@ -30,7 +30,7 @@ extend-exclude = ["apps/mini_ums_web", "apps/dashboard", "apps/widget"]
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM", "ASYNC", "RUF"]
 # The brief's banner text is "Demo – synthetic data" (en dash).
-allowed-confusables = ["–"]
+allowed-confusables = ["–", "›"]
 
 [tool.ruff.lint.isort]
 known-first-party = [

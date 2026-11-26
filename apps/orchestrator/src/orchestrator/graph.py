@@ -15,13 +15,14 @@ from orchestrator import replies
 from orchestrator.courses import match_course
 from orchestrator.dates import NOW, campus_now, resolve_after, resolve_day
 from orchestrator.intent import Classifier, Intent, ReplayMiss
+from orchestrator.navigation import MenuEntry, entries_from_catalogue, match_page
 from orchestrator.replies import Reply
 from orchestrator.ums import MiniUms, UmsUnauthorized, UmsUnavailable
 
 log = logging.getLogger(__name__)
 
 # Intents with their own domain node; everything else gets a templated answer from `other`.
-ASK_NODES = ("attendance", "fees", "timetable", "exams", "assignments")
+ASK_NODES = ("navigate", "attendance", "fees", "timetable", "exams", "assignments")
 
 
 class TurnState(TypedDict, total=False):
@@ -58,6 +59,27 @@ def build_graph(classifier: Classifier, ums: MiniUms) -> Any:
         except UmsUnavailable:
             log.warning("lookup failed", extra={"feature": what})
             return None, replies.data_unavailable(what, link)
+
+    menu: list[MenuEntry] = []  # loaded once, on the first navigate request
+
+    async def navigate(state: TurnState) -> dict[str, Any]:
+        if not menu:
+            try:
+                menu.extend(entries_from_catalogue(await ums.menu()))
+            except UmsUnavailable:
+                log.warning("menu catalogue unavailable")
+                return {
+                    "reply": replies.data_unavailable("portal menu", {"href": "/", "label": "Home"})
+                }
+        said = state["intent"].target or ""
+        match = match_page(said, menu)
+        if match.entry is not None:
+            if match.entry.href.split("?")[0] == (state.get("page_id") or "").split("?")[0]:
+                return {"reply": replies.already_here(match.entry)}
+            return {"reply": replies.navigate(match.entry)}
+        if match.ambiguous:
+            return {"reply": replies.page_ambiguous(match)}
+        return {"reply": replies.page_not_found(said)}
 
     async def fees(state: TurnState) -> dict[str, Any]:
         data, failed = await lookup(
@@ -157,6 +179,7 @@ def build_graph(classifier: Classifier, ums: MiniUms) -> Any:
         return {"reply": replies.out_of_scope()}
 
     nodes = {
+        "navigate": navigate,
         "attendance": attendance,
         "fees": fees,
         "timetable": timetable,

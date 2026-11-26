@@ -26,6 +26,7 @@ from voiceserve_common.pricing import llm_cost
 log = logging.getLogger(__name__)
 
 IntentName = Literal[
+    "navigate",
     "attendance",
     "fees",
     "timetable",
@@ -61,6 +62,7 @@ class Intent(BaseModel):
 
     intent: IntentName = Field(
         description=(
+            "navigate: open a page of the portal (open, go to, take me to). "
             "attendance: their own attendance, overall or for a course. fees: fee dues or fee "
             "status. timetable: their classes on a day, after a time, or the next class. "
             "exams: exam dates, date sheet or seating. assignments: pending assignments. "
@@ -86,6 +88,10 @@ class Intent(BaseModel):
             "For timetable: the time after which classes are wanted, as said, e.g. '2 pm', "
             "'14:30', 'noon'; 'now' when they ask for their next class; else null."
         ),
+    )
+    target: str | None = Field(
+        default=None,
+        description="For navigate: the page they want, as said, e.g. 'fee dashboard'; else null.",
     )
     rank: Rank | None = Field(
         default=None,
@@ -149,6 +155,14 @@ _NOT_A_COURSE = {
 }  # fmt: skip
 
 
+# "open fee dashboard", "take me to the hostel leave page", "go to RMS".
+_NAVIGATE = re.compile(
+    r"^\s*(?:please\s+|can you\s+|could you\s+)?"
+    r"(?:open|go\s+to|take\s+me\s+to|navigate\s+to|bring\s+up|show\s+me\s+the)\s+"
+    r"(.+?)\s*(?:page|section|tab)?\s*(?:please)?\s*[?.!]*\s*$",
+    re.IGNORECASE,
+)
+
 # A phrase starting with a question word is part of the question, never a course name:
 # "in which subject do I have least attendance".
 _QUESTION_WORD = re.compile(r"^(which|what|how|where|when|who|whom|whose|do|does|is|are)\b", re.I)
@@ -189,6 +203,8 @@ class RulesClassifier:
     async def classify(self, text: str) -> Intent:
         if _GREETING.search(text):
             return Intent(intent="greeting")
+        if nav := _NAVIGATE.match(text):
+            return Intent(intent="navigate", target=nav.group(1).strip())
         if _ATTENDANCE.search(text):
             rank = attendance_rank(text)
             if rank is not None and not _CODE.search(text):
